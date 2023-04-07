@@ -10,7 +10,10 @@ contract OwnableTest is Test, IOwnableEvents {
 
     function setUp() public {
         vm.expectEmit();
-        emit OwnershipTransferred(address(0), owner);
+        emit OwnershipTransferred({
+            previousOwner: address(0),
+            newOwner: owner
+        });
 
         game = new Game(owner);
     }
@@ -19,13 +22,19 @@ contract OwnableTest is Test, IOwnableEvents {
         address newOwner = address(2);
 
         vm.expectEmit();
-        emit OwnershipTransferred(owner, newOwner);
+        emit OwnershipTransferred({
+            previousOwner: owner,
+            newOwner: newOwner
+        });
         vm.prank(owner);
         game.transferOwnership(newOwner);
         assertEq(game.owner(), newOwner);
 
         vm.expectEmit();
-        emit OwnershipTransferred(newOwner, owner);
+        emit OwnershipTransferred({
+            previousOwner: newOwner,
+            newOwner: owner
+        });
         vm.prank(newOwner);
         game.transferOwnership(owner);
         assertEq(game.owner(), owner);
@@ -92,7 +101,12 @@ contract BossTest is Test, IBoss {
         vm.startPrank(owner);
 
         vm.expectEmit();
-        emit BossSpawned(boss.name, boss.hp, boss.damage, boss.xpReward);
+        emit BossSpawned({
+            bossName: boss.name,
+            hp: boss.hp,
+            damage: boss.damage,
+            xpReward: boss.xpReward
+        });
         game.setBoss(boss);
         assertFalse(game.isBossDead());
     }

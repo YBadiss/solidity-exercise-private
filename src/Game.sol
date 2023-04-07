@@ -26,7 +26,10 @@ contract Ownable is IOwnableEvents {
     function transferOwnership(address _newOwner) external onlyOwner {
         address previousOwner = owner;
         owner = _newOwner;
-        emit OwnershipTransferred(previousOwner, owner);
+        emit OwnershipTransferred({
+            previousOwner: previousOwner,
+            newOwner: owner
+        });
     }
 }
 
@@ -113,7 +116,10 @@ contract Game is Ownable, IBoss, ICharacter {
         baseEndurance = 10;
         baseIntelligence = 10;
         baseHeal = 100;
-        emit OwnershipTransferred(address(0), owner);
+        emit OwnershipTransferred({
+            previousOwner: address(0),
+            newOwner: owner
+        });
     }
 
     /// @notice Calculate the amount of damage dealt based on remaining hp
@@ -139,13 +145,29 @@ contract Game is Ownable, IBoss, ICharacter {
         character.hp -= damageDealtByBoss;
         characters[characterAddress] = character;
         
-        emit BossIsHit(boss.name, characterAddress, boss.hp, damageDealtByCharacter);
-        emit CharacterIsHit(characterAddress, boss.name, character.hp, damageDealtByBoss);
+        emit BossIsHit({
+            bossName: boss.name,
+            characterAddress: characterAddress,
+            bossHp: boss.hp,
+            damageDealt: damageDealtByCharacter
+        });
+        emit CharacterIsHit({
+            characterAddress: characterAddress,
+            bossName: boss.name,
+            characterHp: character.hp,
+            damageDealt: damageDealtByBoss
+        });
         if (boss.hp == 0) {
-            emit BossKilled(boss.name, characterAddress);
+            emit BossKilled({
+                bossName: boss.name,
+                characterAddress: characterAddress
+            });
         }
         if (character.hp == 0) {
-            emit CharacterKilled(characterAddress, boss.name);
+            emit CharacterKilled({
+                characterAddress: characterAddress,
+                bossName: boss.name
+            });
         }
     }
 
@@ -155,7 +177,12 @@ contract Game is Ownable, IBoss, ICharacter {
 
         uint256 heal = characters[msg.sender].heal;
         characters[_targetCharacter].hp += heal;
-        emit CharacterHealed(_targetCharacter, msg.sender, characters[_targetCharacter].hp, heal);
+        emit CharacterHealed({
+            characterAddress: _targetCharacter,
+            healerAddress: msg.sender,
+            characterHp: characters[_targetCharacter].hp,
+            healAmount: heal
+        });
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -172,7 +199,7 @@ contract Game is Ownable, IBoss, ICharacter {
         _;
     }
 
-    function buildCharacter(uint256 _seed) public returns (Character memory) {
+    function buildCharacter(uint256 _seed) public view returns (Character memory) {
         uint256 enduranceBonus = _seed % 6;
         uint256 intelligenceBonus = 5 - enduranceBonus;
         return Character({
@@ -244,7 +271,12 @@ contract Game is Ownable, IBoss, ICharacter {
     function setBoss(Boss memory _boss) external onlyOwner {
         if (this.isBossDead()) {
             boss = _boss;
-            emit BossSpawned(boss.name, boss.hp, boss.damage, boss.xpReward);
+            emit BossSpawned({
+                bossName: boss.name,
+                hp: boss.hp,
+                damage: boss.damage,
+                xpReward: boss.xpReward
+            });
         } else {
             revert BossIsNotDead();
         }
