@@ -232,6 +232,12 @@ contract GameTest is Test, IBoss, ICharacter {
         (, characterHp, , ) = game.characters(characterAddress);
         assertEq(characterHp, game.baseHeal());
     }
+
+    function test_healCharacter_RevertsIf_selfHeal() public {
+        vm.prank(characterAddress);
+        vm.expectRevert(ICharacter.CharacterCannotSelfHeal.selector);
+        game.healCharacter(characterAddress);
+    }
 }
 
 // TODO

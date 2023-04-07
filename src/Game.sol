@@ -85,6 +85,7 @@ interface ICharacter is ICharacterEvents {
     /// Errors
     error CharacterNotCreated();
     error CharacterAlreadyCreated();
+    error CharacterCannotSelfHeal();
     error CharacterIsDead();
 }
 
@@ -231,8 +232,9 @@ contract Game is Ownable, IBoss, ICharacter {
     }
 
     function healCharacter(address _targetCharacter) public onlyAliveCharacter {
+        if (_targetCharacter == msg.sender) revert CharacterCannotSelfHeal();
         if (!isCharacterCreated(_targetCharacter)) revert CharacterNotCreated();
-        
+
         characters[_targetCharacter].hp += baseHeal;
         emit CharacterHealed(_targetCharacter, msg.sender, characters[_targetCharacter].hp, baseHeal);
     }
