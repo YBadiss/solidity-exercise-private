@@ -56,11 +56,34 @@ interface IBoss is IBossEvents {
     error BossIsNotDead();
 }
 
+interface ICharacterEvents {
+    /// @dev This emits when the Character is created.
+    event CharacterSpawned(address indexed characterAddress, uint256 hp, uint256 damage);
+}
+
+interface ICharacter is ICharacterEvents {
+    /// @notice Character structure
+    /// @dev The parameters should be generated randomly
+    /// @param created Whether the Character is empty or not
+    /// @param hp Life points of the Character
+    /// @param damage Damage inflicted by the Character on each attack
+    /// @param xp Experience earned by the Character
+    struct Character {
+        bool created;
+        uint256 hp;
+        uint256 damage;
+        uint256 xp;
+    }
+
+    /// Errors
+    error CharacterAlreadyCreated();
+}
+
 /// @title World Of Ledger
 /// @author Yacine B. Badiss
 /// @notice Create a character linked to your address and fight monsters!
 /// @dev Main contract controlling the game flow
-contract Game is Ownable, IBoss {
+contract Game is Ownable, IBoss, ICharacter {
     ////////////////////////////////////////////////////////////////////////
     /// All about the boss
     ////////////////////////////////////////////////////////////////////////
@@ -124,6 +147,25 @@ contract Game is Ownable, IBoss {
         }
     }
 
+    ////////////////////////////////////////////////////////////////////////
+    /// All about the characters
+    ////////////////////////////////////////////////////////////////////////
+
+    mapping(address => Character) public characters;
+
+    function newCharacter() external {
+        if (characters[msg.sender].created) {
+            revert CharacterAlreadyCreated();
+        }
+
+        uint256 bonus = block.prevrandao % 5;
+        uint256 hp = 1000 + 100 * bonus;
+        uint256 damage = 100 + 10 * bonus;
+        Character memory character = Character({created: true, hp: hp, damage: damage, xp: 0});
+        characters[msg.sender] = character;
+
+        emit CharacterSpawned(msg.sender, character.hp, character.damage);
+    }
 
     ////////////////////////////////////////////////////////////////////////
     /// Game mechanic

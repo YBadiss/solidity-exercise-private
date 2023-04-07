@@ -110,3 +110,38 @@ contract BossTest is Test, IBoss {
         assertTrue(game.isBossDead());
     }
 }
+
+contract CharacterTest is Test, ICharacter {
+    Game public game;
+    address public owner = address(1);
+    address public characterAddress = address(2);
+    Character public character;
+
+    function setUp() public {
+        game = new Game(owner);
+        uint256 bonus = block.prevrandao % 5;
+        uint256 hp = 1000 + 100 * bonus;
+        uint256 damage = 100 + 10 * bonus;
+        character = Character({created: true, hp: hp, damage: damage, xp: 0});
+    }
+
+    function test_newCharacter() public {
+        vm.startPrank(characterAddress);
+
+        vm.expectEmit();
+        emit CharacterSpawned(characterAddress, character.hp, character.damage);
+        (bool createdBefore, , ,) = game.characters(characterAddress);
+        assertFalse(createdBefore);
+        game.newCharacter();
+        (bool createdAfter, , ,) = game.characters(characterAddress);
+        assertTrue(createdAfter);
+    }
+
+    function test_RevertIf_alreadyCreated() public {
+        vm.startPrank(characterAddress);
+        game.newCharacter();
+
+        vm.expectRevert(ICharacter.CharacterAlreadyCreated.selector);
+        game.newCharacter();
+    }
+}
