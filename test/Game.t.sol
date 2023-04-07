@@ -16,15 +16,6 @@ contract GameTest is Test {
         assertEq(game.owner(), owner);
     }
 
-    function test_setOwner_RevertIf_notOwner() public {
-        vm.expectRevert(Ownable.NotOwner.selector);
-
-        address notOwner = address(0);
-
-        vm.prank(notOwner);
-        game.setOwner(notOwner);
-    }
-
     function test_setOwner() public {
         address newOwner = address(0);
 
@@ -36,40 +27,74 @@ contract GameTest is Test {
         game.setOwner(owner);
         assertEq(game.owner(), owner);
     }
+
+    function test_setOwner_RevertIf_notOwner() public {
+        address notOwner = address(0);
+        vm.startPrank(notOwner);
+
+        vm.expectRevert(Ownable.NotOwner.selector);
+        game.setOwner(notOwner);
+    }
 }
 
 contract BossTest is Test {
-    Boss public boss;
-    string public name = "Test Boss";
-    uint256 public hp = 1000;
-    uint256 public damage = 50;
-    uint256 public xpReward = 10000;
+    Game public game;
+    Game.Boss boss = Game.Boss("Test Boss", 1000, 50, 10000);
+    address public owner = address(1);
 
     function setUp() public {
-        boss = new Boss(name, hp, damage, xpReward);
+        game = new Game(owner);
     }
 
-    function test_bossIsSet() public {
-        assertEq(boss.name(), name);
-        assertEq(boss.hp(), hp);
-        assertEq(boss.damage(), damage);
-        assertEq(boss.xpReward(), xpReward);
+    function test_bossIsDeadByDefault() public {
+        assertEq(game.isBossDead(), true);
+    }
+
+    function test_setBoss() public {
+        vm.startPrank(owner);
+        game.setBoss(boss);
+        assertFalse(game.isBossDead());
+    }
+
+    function test_setBoss_RevertIf_notOwner() public {
+        address notOwner = address(0);
+        vm.startPrank(notOwner);
+
+        vm.expectRevert(Ownable.NotOwner.selector);
+        game.setBoss(boss);
+    }
+
+    function test_setBoss_RevertIf_notDead() public {
+        vm.startPrank(owner);
+        game.setBoss(boss);
+
+        vm.expectRevert(Game.BossIsNotDead.selector);
+        game.setBoss(boss);
     }
 
     function test_bossTakesHit() public {
-        assertEq(boss.hp(), hp);
-        boss.hit(10);
-        assertEq(boss.hp(), hp - 10);
+        vm.startPrank(owner);
+        game.setBoss(boss);
+
+        uint256 startHp = game.bossHp();
+        game.hitBoss(10);
+        assertEq(game.bossHp(), startHp - 10);
     }
 
     function test_bossHpAlwaysAboveZero() public {
-        boss.hit(boss.hp() + 1);
-        assertEq(boss.hp(), 0);
+        vm.startPrank(owner);
+        game.setBoss(boss);
+
+        game.hitBoss(game.bossHp() + 1);
+        assertEq(game.bossHp(), 0);
     }
 
     function test_bossIsDead() public {
-        assertFalse(boss.isDead());
-        boss.hit(boss.hp());
-        assertTrue(boss.isDead());
+        vm.startPrank(owner);
+        game.setBoss(boss);
+
+        assertFalse(game.isBossDead());
+        game.hitBoss(game.bossHp());
+        assertTrue(game.isBossDead());
     }
 }
