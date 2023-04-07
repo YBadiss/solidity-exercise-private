@@ -126,8 +126,12 @@ contract Game is Ownable, IBoss, ICharacter {
     /// @dev Always use to avoid arithmetic errors
     /// @param _damage Amount of damage we're trying to deal
     /// @param _hp Remaining hp
-    function calculateDamageDealt(uint256 _damage, uint256 _hp) public pure returns(uint256) {
+    function calculateDamageDealt(uint256 _damage, uint256 _hp) public pure returns (uint256) {
         return _damage >= _hp ? _hp : _damage;
+    }
+
+    function calculateHpHealed(uint256 _heal, Character memory _character) public pure returns (uint256) {
+        return (_character.maxHp - _character.hp) >= _heal ? _heal : _character.maxHp - _character.hp;
     }
 
     /// @notice Fight with the Boss using the character of the caller
@@ -175,14 +179,16 @@ contract Game is Ownable, IBoss, ICharacter {
         if (_targetCharacter == msg.sender) revert CharacterCannotSelfHeal();
         if (!isCharacterCreated(_targetCharacter)) revert CharacterNotCreated();
 
-        uint256 heal = characters[msg.sender].heal;
-        characters[_targetCharacter].hp += heal;
-        emit CharacterHealed({
-            characterAddress: _targetCharacter,
-            healerAddress: msg.sender,
-            characterHp: characters[_targetCharacter].hp,
-            healAmount: heal
-        });
+        uint256 healAmount = calculateHpHealed(characters[msg.sender].heal, characters[_targetCharacter]);
+        if (healAmount > 0) {
+            characters[_targetCharacter].hp += healAmount;
+            emit CharacterHealed({
+                characterAddress: _targetCharacter,
+                healerAddress: msg.sender,
+                characterHp: characters[_targetCharacter].hp,
+                healAmount: healAmount
+            });
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -202,6 +208,7 @@ contract Game is Ownable, IBoss, ICharacter {
     function buildCharacter(uint256 _seed) public view returns (Character memory) {
         uint256 enduranceBonus = _seed % 6;
         uint256 intelligenceBonus = 5 - enduranceBonus;
+
         return Character({
             created: true,
             maxHp: 100 * (baseEndurance + enduranceBonus),

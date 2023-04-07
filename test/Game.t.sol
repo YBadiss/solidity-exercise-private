@@ -240,12 +240,19 @@ contract GameTest is Test, IBoss, ICharacter {
         assertEq(game.characterHp(characterAddress), game.characterHeal(healerAddress));
     }
 
+    function test_healCharacterNeverAboveMaxHp() public {
+        address healerAddress = address(3);
+        vm.startPrank(healerAddress);
+        game.newCharacter();
+
+        assertEq(game.characterHp(characterAddress), game.characterMaxHp(characterAddress));
+        game.healCharacter(characterAddress);
+        assertEq(game.characterHp(characterAddress), game.characterMaxHp(characterAddress));
+    }
+
     function test_healCharacter_RevertsIf_selfHeal() public {
         vm.prank(characterAddress);
         vm.expectRevert(ICharacter.CharacterCannotSelfHeal.selector);
         game.healCharacter(characterAddress);
     }
 }
-
-// TODO
-// define max hp for characters
