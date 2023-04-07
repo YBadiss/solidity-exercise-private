@@ -30,11 +30,14 @@ contract Ownable is IOwnableEvents {
     }
 }
 
-/// @title World Of Ledger
-/// @author Yacine B. Badiss
-/// @notice Create a character linked to your address and fight monsters!
-/// @dev Main contract controlling the game flow
-contract Game is Ownable {
+interface IBossEvents {
+    /// @dev This emits when the Boss is hit.
+    event BossHit(string indexed bossName, uint256 indexed hp, uint256 indexed damageReceived);
+    /// @dev This emits when the Boss dies.
+    event BossDied(string indexed bossName);
+}
+
+interface IBoss is IBossEvents {
     /// @notice Boss structure
     /// @dev The parameters should be generated randomly
     /// @param _name Name of the Boss
@@ -47,8 +50,16 @@ contract Game is Ownable {
         uint256 damage;
         uint256 xpReward;
     }
-    error BossIsNotDead();
 
+    /// Errors
+    error BossIsNotDead();
+}
+
+/// @title World Of Ledger
+/// @author Yacine B. Badiss
+/// @notice Create a character linked to your address and fight monsters!
+/// @dev Main contract controlling the game flow
+contract Game is Ownable, IBoss {
     /// @notice Current Boss players can fight against
     Boss public boss;
 
@@ -99,7 +110,13 @@ contract Game is Ownable {
     /// @dev We make sure that hp does not go below 0 since it is unsigned
     /// @param _damage The amount of hp the Boss must lose
     function hitBoss(uint256 _damage) public {
-        boss.hp = _damage >= boss.hp ? 0 : boss.hp - _damage;
+        uint256 damageReceived = _damage >= boss.hp ? boss.hp : _damage;
+        boss.hp -= damageReceived;
+        
+        emit BossHit(boss.name, boss.hp, damageReceived);
+        if (boss.hp == 0) {
+            emit BossDied(boss.name);
+        }
     }
 
     /// @notice Set a new Boss

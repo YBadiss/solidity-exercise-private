@@ -40,9 +40,9 @@ contract OwnableTest is Test, IOwnableEvents {
     }
 }
 
-contract BossTest is Test {
+contract BossTest is Test, IBoss {
     Game public game;
-    Game.Boss boss = Game.Boss("Test Boss", 1000, 50, 10000);
+    Boss boss = Boss("Test Boss", 1000, 50, 10000);
     address public owner = address(1);
 
     function setUp() public {
@@ -71,7 +71,7 @@ contract BossTest is Test {
         vm.startPrank(owner);
         game.setBoss(boss);
 
-        vm.expectRevert(Game.BossIsNotDead.selector);
+        vm.expectRevert(IBoss.BossIsNotDead.selector);
         game.setBoss(boss);
     }
 
@@ -80,6 +80,8 @@ contract BossTest is Test {
         game.setBoss(boss);
 
         uint256 startHp = game.bossHp();
+        vm.expectEmit();
+        emit BossHit(boss.name, startHp - 10, 10);
         game.hitBoss(10);
         assertEq(game.bossHp(), startHp - 10);
     }
@@ -96,6 +98,10 @@ contract BossTest is Test {
         vm.startPrank(owner);
         game.setBoss(boss);
 
+        vm.expectEmit();
+        emit BossHit(boss.name, 0, boss.hp);
+        vm.expectEmit();
+        emit BossDied(boss.name);
         assertFalse(game.isBossDead());
         game.hitBoss(game.bossHp());
         assertTrue(game.isBossDead());
