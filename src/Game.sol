@@ -54,6 +54,7 @@ interface IBoss is IBossEvents {
 
     /// Errors
     error BossIsNotDead();
+    error BossIsDead();
 }
 
 interface ICharacterEvents {
@@ -80,6 +81,7 @@ interface ICharacter is ICharacterEvents {
     /// Errors
     error CharacterAlreadyCreated();
     error CharacterNotCreated();
+    error CharacterIsDead();
 }
 
 /// @title World Of Ledger
@@ -160,11 +162,15 @@ contract Game is Ownable, IBoss, ICharacter {
     /// @notice Hit the Boss using the character of the caller
     /// @dev We make sure that hp does not go below 0 since it is unsigned
     function hitBoss() external {
+        // Don't allow hitting a boss that is dead
+        if (isBossDead()) revert BossIsDead();
+
         address characterAddress = msg.sender;
         Character memory character = characters[characterAddress];
-        if (!character.created) {
-            revert CharacterNotCreated();
-        }
+        // Don't allow using a character not created
+        if (!character.created) revert CharacterNotCreated();
+        // Don't allow using a character that is not alive
+        if (character.hp == 0) revert CharacterIsDead();
 
         uint256 damageDealtByCharacter = calculateDamageDealt(character.damage, boss.hp);
         boss.hp -= damageDealtByCharacter;

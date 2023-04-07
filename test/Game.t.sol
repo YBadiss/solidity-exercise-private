@@ -180,7 +180,31 @@ contract GameTest is Test, IBoss, ICharacter {
         assertEq(characterHp, 0);
     }
 
-    // TODO
-    // - test dead character cannot hit
-    // - test dead boss cannot be hit
+    function test_hitBoss_RevertsIf_bossIsDead() public {
+        vm.prank(characterAddress);
+
+        vm.expectRevert(IBoss.BossIsDead.selector);
+        game.hitBoss();
+    }
+
+    function test_hitBoss_RevertsIf_characterNotCreated() public {
+        vm.prank(owner);
+        game.setBoss(boss);
+
+        address notCharacterAddress = address(0);
+        vm.prank(notCharacterAddress);
+
+        vm.expectRevert(ICharacter.CharacterNotCreated.selector);
+        game.hitBoss();
+    }
+
+    function test_hitBoss_RevertsIf_characterIsDead() public {
+        vm.prank(owner);
+        game.setBoss(strongBoss);
+
+        vm.startPrank(characterAddress);
+        game.hitBoss();
+        vm.expectRevert(ICharacter.CharacterIsDead.selector);
+        game.hitBoss();
+    }
 }
