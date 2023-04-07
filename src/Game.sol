@@ -34,9 +34,9 @@ interface IBossEvents {
     /// @dev This emits when the Boss is created.
     event BossSpawned(string indexed bossName, uint256 hp, uint256 damage, uint256 xpReward);
     /// @dev This emits when the Boss is hit.
-    event BossHit(string indexed bossName, uint256 hp, uint256 damageReceived);
+    event BossHit(string indexed bossName, uint256 bossHp, uint256 damageDealtByBoss, address indexed characterAddress, uint256 characterHp, uint256 damageDealtByCharacter);
     /// @dev This emits when the Boss dies.
-    event BossDied(string indexed bossName);
+    event BossKilled(string indexed bossName, address indexed characterAddress);
 }
 
 interface IBoss is IBossEvents {
@@ -59,6 +59,8 @@ interface IBoss is IBossEvents {
 interface ICharacterEvents {
     /// @dev This emits when the Character is created.
     event CharacterSpawned(address indexed characterAddress, uint256 hp, uint256 damage);
+    /// @dev This emits when the Character dies.
+    event CharacterKilled(address indexed characterAddress, string indexed bossName);
 }
 
 interface ICharacter is ICharacterEvents {
@@ -77,6 +79,7 @@ interface ICharacter is ICharacterEvents {
 
     /// Errors
     error CharacterAlreadyCreated();
+    error CharacterNotCreated();
 }
 
 /// @title World Of Ledger
@@ -84,6 +87,26 @@ interface ICharacter is ICharacterEvents {
 /// @notice Create a character linked to your address and fight monsters!
 /// @dev Main contract controlling the game flow
 contract Game is Ownable, IBoss, ICharacter {
+    ////////////////////////////////////////////////////////////////////////
+    /// All about the characters
+    ////////////////////////////////////////////////////////////////////////
+
+    mapping(address => Character) public characters;
+
+    function newCharacter() external {
+        if (characters[msg.sender].created) {
+            revert CharacterAlreadyCreated();
+        }
+
+        uint256 bonus = block.prevrandao % 5;
+        uint256 hp = 1000 + 100 * bonus;
+        uint256 damage = 100 + 10 * bonus;
+        Character memory character = Character({created: true, hp: hp, damage: damage, xp: 0});
+        characters[msg.sender] = character;
+
+        emit CharacterSpawned(msg.sender, character.hp, character.damage);
+    }
+
     ////////////////////////////////////////////////////////////////////////
     /// All about the boss
     ////////////////////////////////////////////////////////////////////////
@@ -134,37 +157,29 @@ contract Game is Ownable, IBoss, ICharacter {
         return boss.hp == 0;
     }
 
-    /// @notice Hit the Boss
+    /// @notice Hit the Boss using the character of the caller
     /// @dev We make sure that hp does not go below 0 since it is unsigned
-    /// @param _damage The amount of hp the Boss must lose
-    function hitBoss(uint256 _damage) public {
-        uint256 damageReceived = _damage >= boss.hp ? boss.hp : _damage;
-        boss.hp -= damageReceived;
+    function hitBoss() external {
+        address characterAddress = msg.sender;
+        Character memory character = characters[characterAddress];
+        if (!character.created) {
+            revert CharacterNotCreated();
+        }
 
-        emit BossHit(boss.name, boss.hp, damageReceived);
+        uint256 damageDealtByCharacter = calculateDamageDealt(character.damage, boss.hp);
+        boss.hp -= damageDealtByCharacter;
+
+        uint256 damageDealtByBoss = calculateDamageDealt(boss.damage, character.hp);
+        character.hp -= damageDealtByBoss;
+        characters[characterAddress] = character;
+        
+        emit BossHit(boss.name, boss.hp, damageDealtByBoss, characterAddress, character.hp, damageDealtByCharacter);
         if (boss.hp == 0) {
-            emit BossDied(boss.name);
+            emit BossKilled(boss.name, characterAddress);
         }
-    }
-
-    ////////////////////////////////////////////////////////////////////////
-    /// All about the characters
-    ////////////////////////////////////////////////////////////////////////
-
-    mapping(address => Character) public characters;
-
-    function newCharacter() external {
-        if (characters[msg.sender].created) {
-            revert CharacterAlreadyCreated();
+        if (character.hp == 0) {
+            emit CharacterKilled(characterAddress, boss.name);
         }
-
-        uint256 bonus = block.prevrandao % 5;
-        uint256 hp = 1000 + 100 * bonus;
-        uint256 damage = 100 + 10 * bonus;
-        Character memory character = Character({created: true, hp: hp, damage: damage, xp: 0});
-        characters[msg.sender] = character;
-
-        emit CharacterSpawned(msg.sender, character.hp, character.damage);
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -177,5 +192,9 @@ contract Game is Ownable, IBoss, ICharacter {
     constructor(address _owner) {
         owner = _owner;
         emit OwnershipTransferred(address(0), owner);
+    }
+
+    function calculateDamageDealt(uint256 damage, uint256 hp) public pure returns(uint256) {
+        return damage >= hp ? hp : damage;
     }
 }
