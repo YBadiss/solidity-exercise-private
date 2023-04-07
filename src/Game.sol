@@ -34,7 +34,7 @@ interface IBossEvents {
     /// @dev This emits when the Boss is created.
     event BossSpawned(string indexed bossName, uint256 hp, uint256 damage, uint256 xpReward);
     /// @dev This emits when the Boss is hit.
-    event BossHit(string indexed bossName, uint256 bossHp, uint256 damageDealtByBoss, address indexed characterAddress, uint256 characterHp, uint256 damageDealtByCharacter);
+    event BossIsHit(string indexed bossName, address indexed characterAddress, uint256 bossHp, uint256 damageDealt);
     /// @dev This emits when the Boss dies.
     event BossKilled(string indexed bossName, address indexed characterAddress);
 }
@@ -60,6 +60,8 @@ interface IBoss is IBossEvents {
 interface ICharacterEvents {
     /// @dev This emits when the Character is created.
     event CharacterSpawned(address indexed characterAddress, uint256 hp, uint256 damage);
+    /// @dev This emits when the Character is hit.
+    event CharacterIsHit(address indexed characterAddress, string indexed bossName, uint256 characterHp, uint256 damageDealt);
     /// @dev This emits when the Character dies.
     event CharacterKilled(address indexed characterAddress, string indexed bossName);
 }
@@ -79,8 +81,8 @@ interface ICharacter is ICharacterEvents {
     }
 
     /// Errors
-    error CharacterAlreadyCreated();
     error CharacterNotCreated();
+    error CharacterAlreadyCreated();
     error CharacterIsDead();
 }
 
@@ -159,9 +161,24 @@ contract Game is Ownable, IBoss, ICharacter {
         return boss.hp == 0;
     }
 
-    /// @notice Hit the Boss using the character of the caller
-    /// @dev We make sure that hp does not go below 0 since it is unsigned
-    function hitBoss() external {
+    ////////////////////////////////////////////////////////////////////////
+    /// Game mechanic
+    ////////////////////////////////////////////////////////////////////////
+
+    /// @notice Instantiate a new contract and set its owner
+    /// @dev `owner` is defined in the Ownable interface
+    /// @param _owner New owner of the contract
+    constructor(address _owner) {
+        owner = _owner;
+        emit OwnershipTransferred(address(0), owner);
+    }
+
+    function calculateDamageDealt(uint256 damage, uint256 hp) public pure returns(uint256) {
+        return damage >= hp ? hp : damage;
+    }
+
+    /// @notice Fight with the Boss using the character of the caller
+    function fightBoss() external {
         // Don't allow hitting a boss that is dead
         if (isBossDead()) revert BossIsDead();
 
@@ -179,28 +196,13 @@ contract Game is Ownable, IBoss, ICharacter {
         character.hp -= damageDealtByBoss;
         characters[characterAddress] = character;
         
-        emit BossHit(boss.name, boss.hp, damageDealtByBoss, characterAddress, character.hp, damageDealtByCharacter);
+        emit BossIsHit(boss.name, characterAddress, boss.hp, damageDealtByCharacter);
+        emit CharacterIsHit(characterAddress, boss.name, character.hp, damageDealtByBoss);
         if (boss.hp == 0) {
             emit BossKilled(boss.name, characterAddress);
         }
         if (character.hp == 0) {
             emit CharacterKilled(characterAddress, boss.name);
         }
-    }
-
-    ////////////////////////////////////////////////////////////////////////
-    /// Game mechanic
-    ////////////////////////////////////////////////////////////////////////
-
-    /// @notice Instantiate a new contract and set its owner
-    /// @dev `owner` is defined in the Ownable interface
-    /// @param _owner New owner of the contract
-    constructor(address _owner) {
-        owner = _owner;
-        emit OwnershipTransferred(address(0), owner);
-    }
-
-    function calculateDamageDealt(uint256 damage, uint256 hp) public pure returns(uint256) {
-        return damage >= hp ? hp : damage;
     }
 }

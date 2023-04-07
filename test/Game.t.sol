@@ -139,10 +139,12 @@ contract GameTest is Test, IBoss, ICharacter {
         uint256 newBossHp = game.bossHp() - character.damage;
         uint256 newCharacterHp = character.hp - game.bossDamage();
         vm.expectEmit();
-        emit BossHit(game.bossName(), newBossHp, game.bossDamage(), characterAddress, newCharacterHp, character.damage);
+        emit BossIsHit(game.bossName(), characterAddress, newBossHp, character.damage);
+        vm.expectEmit();
+        emit CharacterIsHit(characterAddress, game.bossName(), newCharacterHp, game.bossDamage());
 
         vm.prank(characterAddress);
-        game.hitBoss();
+        game.fightBoss();
 
         assertEq(game.bossHp(), newBossHp);
         (, uint256 characterHp, , ) = game.characters(characterAddress);
@@ -155,12 +157,14 @@ contract GameTest is Test, IBoss, ICharacter {
 
         uint256 newCharacterHp = character.hp - game.bossDamage();
         vm.expectEmit();
-        emit BossHit(game.bossName(), 0, game.bossDamage(), characterAddress, newCharacterHp, game.bossHp());
+        emit BossIsHit(game.bossName(), characterAddress, 0, game.bossHp());
+        vm.expectEmit();
+        emit CharacterIsHit(characterAddress, game.bossName(), newCharacterHp, game.bossDamage());
         vm.expectEmit();
         emit BossKilled(game.bossName(), characterAddress);
 
         vm.prank(characterAddress);
-        game.hitBoss();
+        game.fightBoss();
         assertEq(game.bossHp(), 0);
     }
 
@@ -170,24 +174,26 @@ contract GameTest is Test, IBoss, ICharacter {
 
         uint256 newBossHp = game.bossHp() - character.damage;
         vm.expectEmit();
-        emit BossHit(game.bossName(), newBossHp, character.hp, characterAddress, 0, character.damage);
+        emit BossIsHit(game.bossName(), characterAddress, newBossHp, character.damage);
+        vm.expectEmit();
+        emit CharacterIsHit(characterAddress, game.bossName(), 0, character.hp);
         vm.expectEmit();
         emit CharacterKilled(characterAddress, game.bossName());
 
         vm.prank(characterAddress);
-        game.hitBoss();
+        game.fightBoss();
         (, uint256 characterHp, , ) = game.characters(characterAddress);
         assertEq(characterHp, 0);
     }
 
-    function test_hitBoss_RevertsIf_bossIsDead() public {
+    function test_fightBoss_RevertsIf_bossIsDead() public {
         vm.prank(characterAddress);
 
         vm.expectRevert(IBoss.BossIsDead.selector);
-        game.hitBoss();
+        game.fightBoss();
     }
 
-    function test_hitBoss_RevertsIf_characterNotCreated() public {
+    function test_fightBoss_RevertsIf_characterNotCreated() public {
         vm.prank(owner);
         game.setBoss(boss);
 
@@ -195,16 +201,16 @@ contract GameTest is Test, IBoss, ICharacter {
         vm.prank(notCharacterAddress);
 
         vm.expectRevert(ICharacter.CharacterNotCreated.selector);
-        game.hitBoss();
+        game.fightBoss();
     }
 
-    function test_hitBoss_RevertsIf_characterIsDead() public {
+    function test_fightBoss_RevertsIf_characterIsDead() public {
         vm.prank(owner);
         game.setBoss(strongBoss);
 
         vm.startPrank(characterAddress);
-        game.hitBoss();
+        game.fightBoss();
         vm.expectRevert(ICharacter.CharacterIsDead.selector);
-        game.hitBoss();
+        game.fightBoss();
     }
 }
