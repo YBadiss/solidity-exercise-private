@@ -48,22 +48,22 @@ contract CharacterTest is Test, ICharacter {
 
     function setUp() public {
         game = new Game(owner);
-        uint256 bonus = block.prevrandao % 5;
-        uint256 hp = 1000 + 100 * bonus;
-        uint256 damage = 100 + 10 * bonus;
-        character = Character({created: true, hp: hp, damage: damage, xp: 0});
+        character = game.buildCharacter(block.prevrandao);
     }
 
     function test_newCharacter() public {
         vm.startPrank(characterAddress);
 
         vm.expectEmit();
-        emit CharacterSpawned(characterAddress, character.hp, character.damage);
-        (bool createdBefore, , ,) = game.characters(characterAddress);
-        assertFalse(createdBefore);
+        emit CharacterSpawned({
+            characterAddress: characterAddress,
+            maxHp: character.maxHp,
+            physicalDamage: character.physicalDamage,
+            heal: character.heal
+        });
+        assertFalse(game.isCharacterCreated(characterAddress));
         game.newCharacter();
-        (bool createdAfter, , ,) = game.characters(characterAddress);
-        assertTrue(createdAfter);
+        assertTrue(game.isCharacterCreated(characterAddress));
     }
 
     function test_RevertIf_alreadyCreated() public {
@@ -125,21 +125,18 @@ contract GameTest is Test, IBoss, ICharacter {
 
     function setUp() public {
         game = new Game(owner);
-
         vm.prank(characterAddress);
         game.newCharacter();
-        (bool created, uint256 hp, uint256 damage, uint256 xp) = game.characters(characterAddress);
-        character = Character(created, hp, damage, xp);
     }
 
     function test_bossTakesHit() public {
         vm.prank(owner);
         game.setBoss(boss);
 
-        uint256 newBossHp = game.bossHp() - character.damage;
-        uint256 newCharacterHp = character.hp - game.bossDamage();
+        uint256 newBossHp = game.bossHp() - game.characterPhysicalDamage(characterAddress);
+        uint256 newCharacterHp = game.characterHp(characterAddress) - game.bossDamage();
         vm.expectEmit();
-        emit BossIsHit(game.bossName(), characterAddress, newBossHp, character.damage);
+        emit BossIsHit(game.bossName(), characterAddress, newBossHp, game.characterPhysicalDamage(characterAddress));
         vm.expectEmit();
         emit CharacterIsHit(characterAddress, game.bossName(), newCharacterHp, game.bossDamage());
 
@@ -147,15 +144,14 @@ contract GameTest is Test, IBoss, ICharacter {
         game.fightBoss();
 
         assertEq(game.bossHp(), newBossHp);
-        (, uint256 characterHp, , ) = game.characters(characterAddress);
-        assertEq(characterHp, newCharacterHp);
+        assertEq(game.characterHp(characterAddress), newCharacterHp);
     }
 
     function test_bossHpAlwaysAboveZero() public {
         vm.prank(owner);
         game.setBoss(weakBoss);
 
-        uint256 newCharacterHp = character.hp - game.bossDamage();
+        uint256 newCharacterHp = game.characterHp(characterAddress) - game.bossDamage();
         vm.expectEmit();
         emit BossIsHit(game.bossName(), characterAddress, 0, game.bossHp());
         vm.expectEmit();
@@ -172,18 +168,17 @@ contract GameTest is Test, IBoss, ICharacter {
         vm.prank(owner);
         game.setBoss(strongBoss);
 
-        uint256 newBossHp = game.bossHp() - character.damage;
+        uint256 newBossHp = game.bossHp() - game.characterPhysicalDamage(characterAddress);
         vm.expectEmit();
-        emit BossIsHit(game.bossName(), characterAddress, newBossHp, character.damage);
+        emit BossIsHit(game.bossName(), characterAddress, newBossHp, game.characterPhysicalDamage(characterAddress));
         vm.expectEmit();
-        emit CharacterIsHit(characterAddress, game.bossName(), 0, character.hp);
+        emit CharacterIsHit(characterAddress, game.bossName(), 0, game.characterHp(characterAddress));
         vm.expectEmit();
         emit CharacterKilled(characterAddress, game.bossName());
 
         vm.prank(characterAddress);
         game.fightBoss();
-        (, uint256 characterHp, , ) = game.characters(characterAddress);
-        assertEq(characterHp, 0);
+        assertEq(game.characterHp(characterAddress), 0);
     }
 
     function test_fightBoss_RevertsIf_bossIsDead() public {
@@ -220,17 +215,15 @@ contract GameTest is Test, IBoss, ICharacter {
 
         vm.prank(characterAddress);
         game.fightBoss();
-        (, uint256 characterHp, , ) = game.characters(characterAddress);
-        assertEq(characterHp, 0);
+        assertEq(game.characterHp(characterAddress), 0);
 
         address healerAddress = address(3);
         vm.startPrank(healerAddress);
         game.newCharacter();
         vm.expectEmit();
-        emit CharacterHealed(characterAddress, healerAddress, game.baseHeal(), game.baseHeal());
+        emit CharacterHealed(characterAddress, healerAddress, game.characterHeal(healerAddress), game.characterHeal(healerAddress));
         game.healCharacter(characterAddress);
-        (, characterHp, , ) = game.characters(characterAddress);
-        assertEq(characterHp, game.baseHeal());
+        assertEq(game.characterHp(characterAddress), game.characterHeal(healerAddress));
     }
 
     function test_healCharacter_RevertsIf_selfHeal() public {
