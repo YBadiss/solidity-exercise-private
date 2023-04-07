@@ -62,6 +62,8 @@ interface ICharacterEvents {
     event CharacterSpawned(address indexed characterAddress, uint256 hp, uint256 damage);
     /// @dev This emits when the Character is hit.
     event CharacterIsHit(address indexed characterAddress, string indexed bossName, uint256 characterHp, uint256 damageDealt);
+    /// @dev This emits when the Character is hit.
+    event CharacterHealed(address indexed characterAddress, address indexed healerAddress, uint256 characterHp, uint256 healAmount);
     /// @dev This emits when the Character dies.
     event CharacterKilled(address indexed characterAddress, string indexed bossName);
 }
@@ -109,6 +111,18 @@ contract Game is Ownable, IBoss, ICharacter {
         characters[msg.sender] = character;
 
         emit CharacterSpawned(msg.sender, character.hp, character.damage);
+    }
+
+    /// @notice Indicates if the target address has already created a Character
+    /// @param _characterAddress Address of the Character to check
+    function isCharacterCreated(address _characterAddress) public view returns (bool) {
+        return characters[_characterAddress].created;
+    }
+
+    /// @notice Indicates if the target Character is alive
+    /// @param _characterAddress Address of the Character to check
+    function isCharacterAlive(address _characterAddress) public view returns (bool) {
+        return characters[_characterAddress].hp > 0;
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -164,30 +178,40 @@ contract Game is Ownable, IBoss, ICharacter {
     ////////////////////////////////////////////////////////////////////////
     /// Game mechanic
     ////////////////////////////////////////////////////////////////////////
+    uint256 public baseHeal;
 
     /// @notice Instantiate a new contract and set its owner
     /// @dev `owner` is defined in the Ownable interface
     /// @param _owner New owner of the contract
     constructor(address _owner) {
         owner = _owner;
+        baseHeal = 100;
         emit OwnershipTransferred(address(0), owner);
     }
 
-    function calculateDamageDealt(uint256 damage, uint256 hp) public pure returns(uint256) {
-        return damage >= hp ? hp : damage;
+    /// @notice Calculate the amount of damage dealt based on remaining hp
+    /// @dev Always use to avoid arithmetic errors
+    /// @param _damage Amount of damage we're trying to deal
+    /// @param _hp Remaining hp
+    function calculateDamageDealt(uint256 _damage, uint256 _hp) public pure returns(uint256) {
+        return _damage >= _hp ? _hp : _damage;
+    }
+
+    modifier onlyAliveCharacter {
+        // Don't allow using a character not created
+        if (!isCharacterCreated(msg.sender)) revert CharacterNotCreated();
+        // Don't allow using a character that is not alive
+        if (!isCharacterAlive(msg.sender)) revert CharacterIsDead();
+        _;
     }
 
     /// @notice Fight with the Boss using the character of the caller
-    function fightBoss() external {
+    function fightBoss() external onlyAliveCharacter {
         // Don't allow hitting a boss that is dead
         if (isBossDead()) revert BossIsDead();
 
         address characterAddress = msg.sender;
         Character memory character = characters[characterAddress];
-        // Don't allow using a character not created
-        if (!character.created) revert CharacterNotCreated();
-        // Don't allow using a character that is not alive
-        if (character.hp == 0) revert CharacterIsDead();
 
         uint256 damageDealtByCharacter = calculateDamageDealt(character.damage, boss.hp);
         boss.hp -= damageDealtByCharacter;
@@ -204,5 +228,12 @@ contract Game is Ownable, IBoss, ICharacter {
         if (character.hp == 0) {
             emit CharacterKilled(characterAddress, boss.name);
         }
+    }
+
+    function healCharacter(address _targetCharacter) public onlyAliveCharacter {
+        if (!isCharacterCreated(_targetCharacter)) revert CharacterNotCreated();
+        
+        characters[_targetCharacter].hp += baseHeal;
+        emit CharacterHealed(_targetCharacter, msg.sender, characters[_targetCharacter].hp, baseHeal);
     }
 }

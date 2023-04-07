@@ -213,4 +213,26 @@ contract GameTest is Test, IBoss, ICharacter {
         vm.expectRevert(ICharacter.CharacterIsDead.selector);
         game.fightBoss();
     }
+
+    function test_healCharacter() public {
+        vm.prank(owner);
+        game.setBoss(strongBoss);
+
+        vm.prank(characterAddress);
+        game.fightBoss();
+        (, uint256 characterHp, , ) = game.characters(characterAddress);
+        assertEq(characterHp, 0);
+
+        address healerAddress = address(3);
+        vm.startPrank(healerAddress);
+        game.newCharacter();
+        vm.expectEmit();
+        emit CharacterHealed(characterAddress, healerAddress, game.baseHeal(), game.baseHeal());
+        game.healCharacter(characterAddress);
+        (, characterHp, , ) = game.characters(characterAddress);
+        assertEq(characterHp, game.baseHeal());
+    }
 }
+
+// TODO
+// define max hp for characters
