@@ -55,6 +55,9 @@ contract BossTest is Test, IBoss {
 
     function test_setBoss() public {
         vm.startPrank(owner);
+
+        vm.expectEmit();
+        emit BossSpawned(boss.name, boss.hp, boss.damage, boss.xpReward);
         game.setBoss(boss);
         assertFalse(game.isBossDead());
     }
