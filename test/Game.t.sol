@@ -159,6 +159,8 @@ contract GameTest is Test, IBoss, ICharacter {
 
         assertEq(game.bossHp(), newBossHp);
         assertEq(game.characterHp(characterAddress), newCharacterHp);
+        assertEq(game.charactersInvolvedInFight(0), characterAddress);
+        assertEq(game.damageDealtToBoss(characterAddress), game.characterPhysicalDamage(characterAddress));
     }
 
     function test_bossHpAlwaysAboveZero() public {

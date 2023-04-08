@@ -104,9 +104,12 @@ contract Game is Ownable, IBoss, ICharacter {
     ////////////////////////////////////////////////////////////////////////
     /// Game mechanic
     ////////////////////////////////////////////////////////////////////////
-    uint256 public baseEndurance;
-    uint256 public baseIntelligence;
-    uint256 public baseHeal;
+    mapping(address => uint256) public damageDealtToBoss;
+    address[] public charactersInvolvedInFight;
+
+    uint256 public immutable baseEndurance;
+    uint256 public immutable baseIntelligence;
+    uint256 public immutable baseHeal;
 
     /// @notice Instantiate a new contract and set its owner
     /// @dev `owner` is defined in the Ownable interface
@@ -148,6 +151,11 @@ contract Game is Ownable, IBoss, ICharacter {
         uint256 damageDealtByBoss = calculateDamageDealt(boss.damage, character.hp);
         character.hp -= damageDealtByBoss;
         characters[characterAddress] = character;
+
+        if (damageDealtToBoss[characterAddress] == 0) {
+            charactersInvolvedInFight.push(characterAddress);
+        }
+        damageDealtToBoss[characterAddress] += damageDealtByCharacter;
         
         emit BossIsHit({
             bossName: boss.name,
