@@ -4,6 +4,25 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "../src/Game.sol";
 
+// DONE
+// 1. As an owner I want to inherit the admin permissions of the smart contract once it is deployed.
+// 2. As an admin I want to be the only one able to populate the contract with customizable bosses.
+//      - A new boss can't be populated if the current one isn't defeated.
+//      - A dead character can no longer do anything but can be healed.
+// 3. As a user I want to be able to pseudo-randomly generate **one** character per address.
+// 4. As a user I want to be able to attack the current boss with my character.
+//      - Everytime a player attacks the boss, the boss will counterattack. Both will lose life points.
+// 5. As a user I should be able to heal other characters with my character.
+//      - Players can't heal themselves.
+// 6. As a user I want to be able to claim rewards, such as experience, when defeating bosses.
+//      - Only characters who attacked a boss can receive experience as reward.
+//      - Only characters who are alive receive receive experience as reward.
+
+// TODO
+
+// - Only players who have already earned experience can cast the heal spell.
+
+
 contract OwnableTest is Test, IOwnableEvents {
     Game public game;
     address public owner = address(1);

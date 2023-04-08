@@ -108,7 +108,13 @@ contract Game is Ownable, IBoss, ICharacter {
     ////////////////////////////////////////////////////////////////////////
     /// Game mechanic
     ////////////////////////////////////////////////////////////////////////
+    
+    /// @notice Track damage dealt to the current boss by the characters.
+    /// @dev Used for rewards, reset after distributing rewards.
     mapping(address => uint256) public damageDealtToBoss;
+
+    /// @notice Tracks characters that have hit the current boss.
+    /// @dev Used for rewards, reset after distributing rewards.
     address[] public charactersInvolvedInFight;
 
     uint256 public immutable baseEndurance;
@@ -191,6 +197,9 @@ contract Game is Ownable, IBoss, ICharacter {
         }
     }
 
+    /// @notice Heal a character
+    /// @dev Only for characters alive, and cannot self-heal
+    /// @param _targetCharacter Character to heal
     function healCharacter(address _targetCharacter) public onlyAliveCharacter {
         if (_targetCharacter == msg.sender) revert CharacterCannotSelfHeal();
         if (!isCharacterCreated(_targetCharacter)) revert CharacterNotCreated();
@@ -207,12 +216,14 @@ contract Game is Ownable, IBoss, ICharacter {
         }
     }
 
+    /// @notice Distribute rewards to all characters that fought the boss, and are still alive
+    /// @dev Can cost a lot of gas if many characters fought the boss. It is paid by the owner, not the players.
     function distributeRewards() public onlyOwner {
         if (!this.isBossDead()) revert BossIsNotDead();
 
         for (uint256 index = 0; index < charactersInvolvedInFight.length; index++) {
             address characterAddress = charactersInvolvedInFight[index];
-            
+
             if (isCharacterAlive(characterAddress)) {
                 // Only give out XP if the character is still alive
                 uint256 totalDamageDealt = damageDealtToBoss[characterAddress];
@@ -239,16 +250,23 @@ contract Game is Ownable, IBoss, ICharacter {
         return _damage >= _hp ? _hp : _damage;
     }
 
-    function calculateHpHealed(uint256 _heal, Character memory _character) public pure returns (uint256) {
-        return (_character.maxHp - _character.hp) >= _heal ? _heal : _character.maxHp - _character.hp;
+    /// @notice Calculate the amount of healing the target character will receive
+    /// @dev Always use to avoid arithmetic errors
+    /// @param _heal Amount of healing we're trying to provide
+    /// @param _targetCharacter Character to heal
+    function calculateHpHealed(uint256 _heal, Character memory _targetCharacter) public pure returns (uint256) {
+        uint256 missingHp = _targetCharacter.maxHp - _targetCharacter.hp;
+        return missingHp >= _heal ? _heal : missingHp;
     }
 
     ////////////////////////////////////////////////////////////////////////
     /// All about the characters
     ////////////////////////////////////////////////////////////////////////
 
+    /// @notice Track all the characters of the game
     mapping(address => Character) public characters;
 
+    /// @notice Modifier to only allow characters that exist and are currently alive
     modifier onlyAliveCharacter {
         // Don't allow using a character not created
         if (!isCharacterCreated(msg.sender)) revert CharacterNotCreated();
@@ -257,6 +275,7 @@ contract Game is Ownable, IBoss, ICharacter {
         _;
     }
 
+    /// @notice Helper function to build character attributes given a seed
     function buildCharacter(uint256 _seed) public view returns (Character memory) {
         uint256 enduranceBonus = _seed % 6;
         uint256 intelligenceBonus = 5 - enduranceBonus;
@@ -271,10 +290,9 @@ contract Game is Ownable, IBoss, ICharacter {
         });
     }
 
+    /// @notice Register a new character for the caller
     function newCharacter() external {
-        if (characters[msg.sender].created) {
-            revert CharacterAlreadyCreated();
-        }
+        if (characters[msg.sender].created) revert CharacterAlreadyCreated();
 
         characters[msg.sender] = buildCharacter(block.prevrandao);
         emit CharacterSpawned({
@@ -297,22 +315,37 @@ contract Game is Ownable, IBoss, ICharacter {
         return characters[_characterAddress].hp > 0;
     }
 
+    /// @notice Get the max HP of the character
+    /// @param _characterAddress Address of the Character to check
+    /// @return uint256 Max HP of the character
     function characterMaxHp(address _characterAddress) public view returns (uint256) {
         return characters[_characterAddress].maxHp;
     }
 
+    /// @notice Get the physical damage the character deals
+    /// @param _characterAddress Address of the Character to check
+    /// @return uint256 Physical Damage of the character
     function characterPhysicalDamage(address _characterAddress) public view returns (uint256) {
         return characters[_characterAddress].physicalDamage;
     }
 
+    /// @notice Get the amount of healing provided by the character
+    /// @param _characterAddress Address of the Character to check
+    /// @return uint256 Heal of the character
     function characterHeal(address _characterAddress) public view returns (uint256) {
         return characters[_characterAddress].heal;
     }
 
+    /// @notice Get the current HP of the character
+    /// @param _characterAddress Address of the Character to check
+    /// @return uint256 Current HP of the character
     function characterHp(address _characterAddress) public view returns (uint256) {
         return characters[_characterAddress].hp;
     }
 
+    /// @notice Get the current XP of the character
+    /// @param _characterAddress Address of the Character to check
+    /// @return uint256 Current XP of the character
     function characterXp(address _characterAddress) public view returns (uint256) {
         return characters[_characterAddress].xp;
     }
@@ -321,7 +354,7 @@ contract Game is Ownable, IBoss, ICharacter {
     /// All about the boss
     ////////////////////////////////////////////////////////////////////////
 
-    /// @notice Current Boss players can fight against
+    /// @notice Current Boss characters can fight against
     Boss public boss;
 
     /// @notice Get the name of the boss
