@@ -35,7 +35,7 @@ contract Ownable is IOwnableEvents {
 
 interface IBossEvents {
     /// @dev This emits when the Boss is created.
-    event BossSpawned(string indexed bossName, uint256 hp, uint256 damage, uint256 xpReward);
+    event BossSpawned(string indexed bossName, uint256 maxHp, uint256 damage, uint256 xpReward);
     /// @dev This emits when the Boss is hit.
     event BossIsHit(string indexed bossName, address indexed characterAddress, uint256 bossHp, uint256 damageDealt);
     /// @dev This emits when the Boss dies.
@@ -45,11 +45,13 @@ interface IBossEvents {
 interface IBoss is IBossEvents {
     /// @notice Boss structure
     /// @param name Name of the Boss
-    /// @param hp Life points of the Boss
+    /// @param maxHp Max HP of the Boss
+    /// @param hp Curernt HP of the Boss
     /// @param damage Damage inflicted by the Boss on each attack
     /// @param xpReward Experience reward split between all fighters
     struct Boss {
         string name;
+        uint256 maxHp;
         uint256 hp;
         uint256 damage;
         uint256 xpReward;
@@ -67,6 +69,8 @@ interface ICharacterEvents {
     event CharacterIsHit(address indexed characterAddress, string indexed bossName, uint256 characterHp, uint256 damageDealt);
     /// @dev This emits when the Character is hit.
     event CharacterHealed(address indexed characterAddress, address indexed healerAddress, uint256 characterHp, uint256 healAmount);
+    /// @dev This emits when the Character receives xp rewards.
+    event CharacterRewarded(address indexed characterAddress, string indexed bossName, uint256 xpReward, uint256 totalDamageDealt);
     /// @dev This emits when the Character dies.
     event CharacterKilled(address indexed characterAddress, string indexed bossName);
 }
@@ -125,16 +129,20 @@ contract Game is Ownable, IBoss, ICharacter {
         });
     }
 
-    /// @notice Calculate the amount of damage dealt based on remaining hp
-    /// @dev Always use to avoid arithmetic errors
-    /// @param _damage Amount of damage we're trying to deal
-    /// @param _hp Remaining hp
-    function calculateDamageDealt(uint256 _damage, uint256 _hp) public pure returns (uint256) {
-        return _damage >= _hp ? _hp : _damage;
-    }
+    /// @notice Set a new Boss
+    /// @dev Only for the owner, and if the boss is already dead
+    /// @param _boss New boss to set
+    function setBoss(Boss memory _boss) external onlyOwner {
+        if (!this.isBossDead()) revert BossIsNotDead();
 
-    function calculateHpHealed(uint256 _heal, Character memory _character) public pure returns (uint256) {
-        return (_character.maxHp - _character.hp) >= _heal ? _heal : _character.maxHp - _character.hp;
+        distributeRewards();
+        boss = _boss;
+        emit BossSpawned({
+            bossName: boss.name,
+            maxHp: boss.maxHp,
+            damage: boss.damage,
+            xpReward: boss.xpReward
+        });
     }
 
     /// @notice Fight with the Boss using the character of the caller
@@ -197,6 +205,42 @@ contract Game is Ownable, IBoss, ICharacter {
                 healAmount: healAmount
             });
         }
+    }
+
+    function distributeRewards() public onlyOwner {
+        if (!this.isBossDead()) revert BossIsNotDead();
+
+        for (uint256 index = 0; index < charactersInvolvedInFight.length; index++) {
+            address characterAddress = charactersInvolvedInFight[index];
+            
+            if (isCharacterAlive(characterAddress)) {
+                // Only give out XP if the character is still alive
+                uint256 totalDamageDealt = damageDealtToBoss[characterAddress];
+                uint256 xpReward = (totalDamageDealt * boss.xpReward) / boss.maxHp;
+                characters[characterAddress].xp += xpReward;
+                emit CharacterRewarded({
+                    characterAddress: characterAddress,
+                    bossName: boss.name,
+                    xpReward: xpReward,
+                    totalDamageDealt: totalDamageDealt
+                });
+            }
+            damageDealtToBoss[characterAddress] = 0;
+        }
+        // This can be expensive depending on how many characters were involved
+        delete charactersInvolvedInFight;
+    }
+
+    /// @notice Calculate the amount of damage dealt based on remaining hp
+    /// @dev Always use to avoid arithmetic errors
+    /// @param _damage Amount of damage we're trying to deal
+    /// @param _hp Remaining hp
+    function calculateDamageDealt(uint256 _damage, uint256 _hp) public pure returns (uint256) {
+        return _damage >= _hp ? _hp : _damage;
+    }
+
+    function calculateHpHealed(uint256 _heal, Character memory _character) public pure returns (uint256) {
+        return (_character.maxHp - _character.hp) >= _heal ? _heal : _character.maxHp - _character.hp;
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -280,27 +324,16 @@ contract Game is Ownable, IBoss, ICharacter {
     /// @notice Current Boss players can fight against
     Boss public boss;
 
-    /// @notice Set a new Boss
-    /// @dev Only for the owner, and if the boss is already dead
-    /// @param _boss New boss to set
-    function setBoss(Boss memory _boss) external onlyOwner {
-        if (this.isBossDead()) {
-            boss = _boss;
-            emit BossSpawned({
-                bossName: boss.name,
-                hp: boss.hp,
-                damage: boss.damage,
-                xpReward: boss.xpReward
-            });
-        } else {
-            revert BossIsNotDead();
-        }
-    }
-
     /// @notice Get the name of the boss
     /// @return string Name of the boss
     function bossName() external view returns(string memory) {
         return boss.name;
+    }
+    
+    /// @notice Get the max HP of the boss
+    /// @return uint256 Max HP of the boss
+    function bossMaxHp() external view returns(uint256) {
+        return boss.maxHp;
     }
     
     /// @notice Get the hp of the boss

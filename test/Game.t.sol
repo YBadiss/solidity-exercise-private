@@ -87,7 +87,7 @@ contract CharacterTest is Test, ICharacter {
 contract BossTest is Test, IBoss {
     Game public game;
     address public owner = address(1);
-    Boss boss = Boss({name: "Test Boss", hp: 1000, damage: 50, xpReward: 10000});
+    Boss boss = Boss({name: "Test Boss", maxHp: 1000, hp: 1000, damage: 50, xpReward: 10000});
 
     function setUp() public {
         game = new Game(owner);
@@ -103,7 +103,7 @@ contract BossTest is Test, IBoss {
         vm.expectEmit();
         emit BossSpawned({
             bossName: boss.name,
-            hp: boss.hp,
+            maxHp: boss.hp,
             damage: boss.damage,
             xpReward: boss.xpReward
         });
@@ -131,9 +131,9 @@ contract BossTest is Test, IBoss {
 contract GameTest is Test, IBoss, ICharacter {
     Game public game;
     address public owner = address(1);
-    Boss boss = Boss({name: "Test Boss", hp: 1000, damage: 50, xpReward: 10000});
-    Boss weakBoss = Boss({name: "Weak Boss", hp: 1, damage: 50, xpReward: 10});
-    Boss strongBoss = Boss({name: "Strong Boss", hp: 1000, damage: 10000, xpReward: 100000000});
+    Boss boss = Boss({name: "Test Boss", maxHp: 1000, hp: 1000, damage: 50, xpReward: 10000});
+    Boss weakBoss = Boss({name: "Weak Boss", maxHp: 1, hp: 1, damage: 50, xpReward: 10});
+    Boss strongBoss = Boss({name: "Strong Boss", maxHp: 1000, hp: 1000, damage: 10000, xpReward: 100000000});
     address public characterAddress = address(2);
     Character public character;
 
@@ -256,5 +256,47 @@ contract GameTest is Test, IBoss, ICharacter {
         vm.prank(characterAddress);
         vm.expectRevert(ICharacter.CharacterCannotSelfHeal.selector);
         game.healCharacter(characterAddress);
+    }
+
+    function test_distributeRewards() public {
+        vm.prank(owner);
+        game.setBoss(strongBoss);
+
+        // We hit the boss until it's about to die
+        uint size = game.bossHp() / game.characterPhysicalDamage(characterAddress) - 1;
+        address[] memory deadCharacters = new address[](size);
+        for (uint160 index = 0; index < size; index++) {
+            address deadCharacter = address(index + 4);
+            vm.startPrank(deadCharacter);
+            game.newCharacter();
+            game.fightBoss();
+            vm.stopPrank();
+            deadCharacters[index] = deadCharacter;
+        }
+        
+        // Finish the boss with our character
+        vm.prank(characterAddress);
+        game.fightBoss();
+
+        // Heal our character because it's dead
+        address healerAddress = address(3);
+        vm.startPrank(healerAddress);
+        game.newCharacter();
+        game.healCharacter(characterAddress);
+        vm.stopPrank();
+
+        vm.prank(owner);
+        game.distributeRewards();
+        // The only fighter alive gets its xp based on the damage dealt
+        assertEq(
+            game.characterXp(characterAddress),
+            game.characterPhysicalDamage(characterAddress) * game.bossXpReward() / game.bossMaxHp()
+        );
+        // The healer didn't fight, no xp
+        assertEq(game.characterXp(healerAddress), 0);
+        // The other fighters are all dead, no xp
+        for (uint160 index = 0; index < deadCharacters.length; index++) {
+            assertEq(game.characterXp(deadCharacters[index]), 0);
+        }
     }
 }
