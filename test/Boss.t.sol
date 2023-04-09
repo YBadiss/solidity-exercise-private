@@ -4,12 +4,15 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "../src/Boss.sol";
 
-contract BossTest is Test, _Boss {
+contract BossTest is Test, IBoss {
+    _Boss bossContract;
+
     function setUp() public {
+        bossContract = new _Boss();
     }
 
     function test_bossIsDeadByDefault() public {
-        assertEq(isBossDead(), true);
+        assertEq(bossContract.isBossDead(), true);
     }
 
     function test_setBoss() public {
@@ -21,7 +24,7 @@ contract BossTest is Test, _Boss {
             damage: boss.damage,
             xpReward: boss.xpReward
         });
-        _setBoss(boss);
-        assertFalse(isBossDead());
+        bossContract.setBoss(boss);
+        assertFalse(bossContract.isBossDead());
     }
 }

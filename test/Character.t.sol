@@ -4,14 +4,16 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "../src/Character.sol";
 
-contract CharacterTest is Test, _Character {
+contract CharacterTest is Test, ICharacter {
+    _Character characterContract;
     address public characterAddress = address(2);
 
     function setUp() public {
+        characterContract = new _Character();
     }
 
     function test_newCharacter() public {
-        Character memory character = this.buildCharacter(block.prevrandao);
+        Character memory character = characterContract.buildCharacter(block.prevrandao);
         vm.startPrank(characterAddress);
 
         vm.expectEmit();
@@ -21,16 +23,16 @@ contract CharacterTest is Test, _Character {
             physicalDamage: character.physicalDamage,
             heal: character.heal
         });
-        assertFalse(this.isCharacterCreated(characterAddress));
-        this.newCharacter();
-        assertTrue(this.isCharacterCreated(characterAddress));
+        assertFalse(characterContract.isCharacterCreated(characterAddress));
+        characterContract.newCharacter();
+        assertTrue(characterContract.isCharacterCreated(characterAddress));
     }
 
     function test_RevertIf_alreadyCreated() public {
         vm.startPrank(characterAddress);
-        this.newCharacter();
+        characterContract.newCharacter();
 
         vm.expectRevert(ICharacter.CharacterAlreadyCreated.selector);
-        this.newCharacter();
+        characterContract.newCharacter();
     }
 }

@@ -34,10 +34,14 @@ contract _Boss is IBoss {
     /// @notice Current Boss characters can fight against
     Boss public boss;
 
+    ////////////////////////////////////////////////////////////////////////
+    /// Owner functions
+    ////////////////////////////////////////////////////////////////////////
+
     /// @notice Set a new Boss
     /// @dev Only if the boss is already dead
     /// @param _boss New boss to set
-    function _setBoss(Boss memory _boss) internal {
+    function setBoss(Boss memory _boss) public virtual {
         if (!this.isBossDead()) revert BossIsNotDead();
 
         boss = _boss;
@@ -48,6 +52,10 @@ contract _Boss is IBoss {
             xpReward: boss.xpReward
         });
     }
+
+    ////////////////////////////////////////////////////////////////////////
+    /// Helper functions
+    ////////////////////////////////////////////////////////////////////////
 
     /// @notice Get the name of the boss
     /// @return string Name of the boss

@@ -24,10 +24,6 @@ import "./Boss.sol";
 ///      - Only characters who attacked a boss can receive experience as reward.
 ///      - Only characters who are alive can receive experience as reward.
 contract Game is Ownable, _Boss, _Character {
-    ////////////////////////////////////////////////////////////////////////
-    /// Game mechanic
-    ////////////////////////////////////////////////////////////////////////
-    
     /// @notice Track damage dealt to the current boss by the characters.
     /// @dev Used for rewards, reset after distributing rewards.
     mapping(address => uint256) public damageDealtToBoss;
@@ -47,16 +43,12 @@ contract Game is Ownable, _Boss, _Character {
         });
     }
 
-    /// @notice Set a new Boss
-    /// @dev Only for the owner, and if the boss is already dead
-    /// @param _boss New boss to set
-    function setBoss(Boss memory _boss) external onlyOwner {
-        distributeRewards();
-        _setBoss(_boss);
-    }
+    ////////////////////////////////////////////////////////////////////////
+    /// Character actions
+    ////////////////////////////////////////////////////////////////////////
 
     /// @notice Fight with the Boss using the character of the caller
-    function fightBoss() external onlyAliveCharacter {
+    function fightBoss() external override onlyAliveCharacter {
         // Don't allow hitting a boss that is dead
         if (isBossDead()) revert BossIsDead();
 
@@ -104,7 +96,7 @@ contract Game is Ownable, _Boss, _Character {
     /// @notice Heal a character
     /// @dev Only for characters alive, and cannot self-heal
     /// @param _targetCharacter Character to heal
-    function healCharacter(address _targetCharacter) public onlyAliveCharacter onlyExperiencedCharacter {
+    function healCharacter(address _targetCharacter) external override onlyAliveCharacter onlyExperiencedCharacter {
         if (_targetCharacter == msg.sender) revert CharacterCannotSelfHeal();
         if (!isCharacterCreated(_targetCharacter)) revert CharacterNotCreated();
 
@@ -118,6 +110,18 @@ contract Game is Ownable, _Boss, _Character {
                 healAmount: healAmount
             });
         }
+    }
+
+    ////////////////////////////////////////////////////////////////////////
+    /// Owner actions
+    ////////////////////////////////////////////////////////////////////////
+
+    /// @notice Set a new Boss
+    /// @dev Only for the owner, and if the boss is already dead
+    /// @param _boss New boss to set
+    function setBoss(Boss memory _boss) public override onlyOwner {
+        distributeRewards();
+        super.setBoss(_boss);
     }
 
     /// @notice Distribute rewards to all characters that fought the boss, and are still alive
@@ -144,22 +148,5 @@ contract Game is Ownable, _Boss, _Character {
         }
         // This can be expensive depending on how many characters were involved
         delete charactersInvolvedInFight;
-    }
-
-    /// @notice Calculate the amount of damage dealt based on remaining hp
-    /// @dev Always use to avoid arithmetic errors
-    /// @param _damage Amount of damage we're trying to deal
-    /// @param _hp Remaining hp
-    function calculateDamageDealt(uint256 _damage, uint256 _hp) public pure returns (uint256) {
-        return _damage >= _hp ? _hp : _damage;
-    }
-
-    /// @notice Calculate the amount of healing the target character will receive
-    /// @dev Always use to avoid arithmetic errors
-    /// @param _heal Amount of healing we're trying to provide
-    /// @param _targetCharacter Character to heal
-    function calculateHpHealed(uint256 _heal, Character memory _targetCharacter) public pure returns (uint256) {
-        uint256 missingHp = _targetCharacter.maxHp - _targetCharacter.hp;
-        return missingHp >= _heal ? _heal : missingHp;
     }
 }

@@ -48,9 +48,40 @@ contract _Character is ICharacter {
     /// @notice Track all the characters of the game
     mapping(address => Character) public characters;
 
+    /// TODO document and improve setting these
     uint256 public immutable baseEndurance = 10;
     uint256 public immutable baseIntelligence = 10;
     uint256 public immutable baseHeal = 100;
+
+    ////////////////////////////////////////////////////////////////////////
+    /// Character actions
+    ////////////////////////////////////////////////////////////////////////
+
+    /// @notice Fight with the Boss using the character of the caller
+    /// @dev Implement in the main contract.
+    function fightBoss() external virtual onlyAliveCharacter {}
+
+    /// @notice Heal a character
+    /// @dev Only for characters alive, and cannot self-heal. Implement in the main contract.
+    /// @param _targetCharacter Character to heal
+    function healCharacter(address _targetCharacter) external virtual onlyAliveCharacter onlyExperiencedCharacter {}
+
+    /// @notice Register a new character for the caller
+    function newCharacter() external {
+        if (characters[msg.sender].created) revert CharacterAlreadyCreated();
+
+        characters[msg.sender] = buildCharacter(block.prevrandao);
+        emit CharacterSpawned({
+            characterAddress: msg.sender,
+            maxHp: characters[msg.sender].maxHp,
+            physicalDamage: characters[msg.sender].physicalDamage,
+            heal: characters[msg.sender].heal
+        });
+    }
+
+    ////////////////////////////////////////////////////////////////////////
+    /// Helper functions
+    ////////////////////////////////////////////////////////////////////////
 
     /// @notice Modifier to only allow characters that exist and are currently alive
     modifier onlyAliveCharacter {
@@ -79,19 +110,6 @@ contract _Character is ICharacter {
             heal: baseHeal + 10 * (baseIntelligence + intelligenceBonus),
             hp: 100 * (baseEndurance + enduranceBonus),
             xp: 0
-        });
-    }
-
-    /// @notice Register a new character for the caller
-    function newCharacter() external {
-        if (characters[msg.sender].created) revert CharacterAlreadyCreated();
-
-        characters[msg.sender] = buildCharacter(block.prevrandao);
-        emit CharacterSpawned({
-            characterAddress: msg.sender,
-            maxHp: characters[msg.sender].maxHp,
-            physicalDamage: characters[msg.sender].physicalDamage,
-            heal: characters[msg.sender].heal
         });
     }
 
@@ -146,5 +164,22 @@ contract _Character is ICharacter {
     /// @return uint256 Current XP of the character
     function characterXp(address _characterAddress) public view returns (uint256) {
         return characters[_characterAddress].xp;
+    }
+
+    /// @notice Calculate the amount of damage dealt based on remaining hp
+    /// @dev Always use to avoid arithmetic errors
+    /// @param _damage Amount of damage we're trying to deal
+    /// @param _hp Remaining hp
+    function calculateDamageDealt(uint256 _damage, uint256 _hp) public pure returns (uint256) {
+        return _damage >= _hp ? _hp : _damage;
+    }
+
+    /// @notice Calculate the amount of healing the target character will receive
+    /// @dev Always use to avoid arithmetic errors
+    /// @param _heal Amount of healing we're trying to provide
+    /// @param _targetCharacter Character to heal
+    function calculateHpHealed(uint256 _heal, Character memory _targetCharacter) public pure returns (uint256) {
+        uint256 missingHp = _targetCharacter.maxHp - _targetCharacter.hp;
+        return missingHp >= _heal ? _heal : missingHp;
     }
 }
