@@ -14,14 +14,10 @@ import "../src/Game.sol";
 //      - Everytime a player attacks the boss, the boss will counterattack. Both will lose life points.
 // 5. As a user I should be able to heal other characters with my character.
 //      - Players can't heal themselves.
+//      - Only players who have already earned experience can cast the heal spell.
 // 6. As a user I want to be able to claim rewards, such as experience, when defeating bosses.
 //      - Only characters who attacked a boss can receive experience as reward.
 //      - Only characters who are alive receive receive experience as reward.
-
-// TODO
-
-// - Only players who have already earned experience can cast the heal spell.
-
 
 contract OwnableTest is Test, IOwnableEvents {
     Game public game;
@@ -155,11 +151,22 @@ contract GameTest is Test, IBoss, ICharacter {
     Boss strongBoss = Boss({name: "Strong Boss", maxHp: 1000, hp: 1000, damage: 10000, xpReward: 100000000});
     address public characterAddress = address(2);
     Character public character;
+    address public healerAddress = address(3);
 
     function setUp() public {
         game = new Game(owner);
         vm.prank(characterAddress);
         game.newCharacter();
+
+        // Give some xp to the healer
+        vm.prank(owner);
+        game.setBoss(weakBoss);
+        vm.startPrank(healerAddress);
+        game.newCharacter();
+        game.fightBoss();
+        vm.stopPrank();
+        vm.prank(owner);
+        game.distributeRewards();
     }
 
     function test_bossTakesHit() public {
@@ -252,29 +259,25 @@ contract GameTest is Test, IBoss, ICharacter {
         game.fightBoss();
         assertEq(game.characterHp(characterAddress), 0);
 
-        address healerAddress = address(3);
-        vm.startPrank(healerAddress);
-        game.newCharacter();
+
         vm.expectEmit();
         emit CharacterHealed(characterAddress, healerAddress, game.characterHeal(healerAddress), game.characterHeal(healerAddress));
+        vm.prank(healerAddress);
         game.healCharacter(characterAddress);
         assertEq(game.characterHp(characterAddress), game.characterHeal(healerAddress));
     }
 
     function test_healCharacterNeverAboveMaxHp() public {
-        address healerAddress = address(3);
-        vm.startPrank(healerAddress);
-        game.newCharacter();
-
         assertEq(game.characterHp(characterAddress), game.characterMaxHp(characterAddress));
+        vm.prank(healerAddress);
         game.healCharacter(characterAddress);
         assertEq(game.characterHp(characterAddress), game.characterMaxHp(characterAddress));
     }
 
     function test_healCharacter_RevertsIf_selfHeal() public {
-        vm.prank(characterAddress);
+        vm.prank(healerAddress);
         vm.expectRevert(ICharacter.CharacterCannotSelfHeal.selector);
-        game.healCharacter(characterAddress);
+        game.healCharacter(healerAddress);
     }
 
     function test_distributeRewards() public {
@@ -298,21 +301,25 @@ contract GameTest is Test, IBoss, ICharacter {
         game.fightBoss();
 
         // Heal our character because it's dead
-        address healerAddress = address(3);
-        vm.startPrank(healerAddress);
-        game.newCharacter();
+        vm.prank(healerAddress);
         game.healCharacter(characterAddress);
-        vm.stopPrank();
+        uint256 healerXp = game.characterXp(healerAddress);
+        uint256 expectedReward = game.characterPhysicalDamage(characterAddress) * game.bossXpReward() / game.bossMaxHp();
+
+        vm.expectEmit();
+        emit CharacterRewarded({
+            characterAddress: characterAddress,
+            bossName: game.bossName(),
+            xpReward: expectedReward,
+            totalDamageDealt: game.characterPhysicalDamage(characterAddress)
+        });
 
         vm.prank(owner);
         game.distributeRewards();
         // The only fighter alive gets its xp based on the damage dealt
-        assertEq(
-            game.characterXp(characterAddress),
-            game.characterPhysicalDamage(characterAddress) * game.bossXpReward() / game.bossMaxHp()
-        );
-        // The healer didn't fight, no xp
-        assertEq(game.characterXp(healerAddress), 0);
+        assertEq(game.characterXp(characterAddress), expectedReward);
+        // The healer didn't fight, no additional xp
+        assertEq(game.characterXp(healerAddress), healerXp);
         // The other fighters are all dead, no xp
         for (uint160 index = 0; index < deadCharacters.length; index++) {
             assertEq(game.characterXp(deadCharacters[index]), 0);

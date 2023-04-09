@@ -97,6 +97,7 @@ interface ICharacter is ICharacterEvents {
     error CharacterNotCreated();
     error CharacterAlreadyCreated();
     error CharacterCannotSelfHeal();
+    error CharacterNotExperienced();
     error CharacterIsDead();
 }
 
@@ -104,6 +105,20 @@ interface ICharacter is ICharacterEvents {
 /// @author Yacine B. Badiss
 /// @notice Create a character linked to your address and fight monsters!
 /// @dev Main contract controlling the game flow
+/// Rules:
+/// 1. As an owner I want to inherit the admin permissions of the smart contract once it is deployed.
+/// 2. As an admin I want to be the only one able to populate the contract with customizable bosses.
+///      - A new boss can't be populated if the current one isn't defeated.
+///      - A dead character can no longer do anything but can be healed.
+/// 3. As a user I want to be able to pseudo-randomly generate **one** character per address.
+/// 4. As a user I want to be able to attack the current boss with my character.
+///      - Everytime a player attacks the boss, the boss will counterattack. Both will lose life points.
+/// 5. As a user I should be able to heal other characters with my character.
+///      - Players can't heal themselves.
+///      - Only players who have already earned experience can cast the heal spell.
+/// 6. As a user I want to be able to claim rewards, such as experience, when defeating bosses.
+///      - Only characters who attacked a boss can receive experience as reward.
+///      - Only characters who are alive can receive experience as reward.
 contract Game is Ownable, IBoss, ICharacter {
     ////////////////////////////////////////////////////////////////////////
     /// Game mechanic
@@ -200,7 +215,7 @@ contract Game is Ownable, IBoss, ICharacter {
     /// @notice Heal a character
     /// @dev Only for characters alive, and cannot self-heal
     /// @param _targetCharacter Character to heal
-    function healCharacter(address _targetCharacter) public onlyAliveCharacter {
+    function healCharacter(address _targetCharacter) public onlyAliveCharacter onlyExperiencedCharacter {
         if (_targetCharacter == msg.sender) revert CharacterCannotSelfHeal();
         if (!isCharacterCreated(_targetCharacter)) revert CharacterNotCreated();
 
@@ -275,6 +290,12 @@ contract Game is Ownable, IBoss, ICharacter {
         _;
     }
 
+    /// @notice Modifier to only allow characters that have earned xp
+    modifier onlyExperiencedCharacter {
+        if (characters[msg.sender].xp == 0) revert CharacterNotExperienced();
+        _;
+    }
+
     /// @notice Helper function to build character attributes given a seed
     function buildCharacter(uint256 _seed) public view returns (Character memory) {
         uint256 enduranceBonus = _seed % 6;
@@ -313,6 +334,12 @@ contract Game is Ownable, IBoss, ICharacter {
     /// @param _characterAddress Address of the Character to check
     function isCharacterAlive(address _characterAddress) public view returns (bool) {
         return characters[_characterAddress].hp > 0;
+    }
+
+    /// @notice Indicates if the target Character can heal others
+    /// @param _characterAddress Address of the Character to check
+    function canCharacterHeal(address _characterAddress) public view returns (bool) {
+        return characters[_characterAddress].xp > 0;
     }
 
     /// @notice Get the max HP of the character
