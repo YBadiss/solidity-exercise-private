@@ -48,10 +48,19 @@ contract _Character is ICharacter {
     /// @notice Track all the characters of the game
     mapping(address => Character) public characters;
 
-    /// TODO document and improve setting these
-    uint256 public immutable baseEndurance = 10;
-    uint256 public immutable baseIntelligence = 10;
-    uint256 public immutable baseHeal = 100;
+    /// @notice Base modifier for characters' max hp and physical damage
+    uint256 public immutable baseEndurance;
+    /// @notice Base modifier for characters' magical ability
+    uint256 public immutable baseIntelligence;
+
+    /// @notice Instantiate a new contract and set the base modifiers
+    /// @dev Not meant to be deployed by itself, use with `Game` contract
+    /// @param _baseEndurance Base modifier for characters' max hp and physical damage
+    /// @param _baseIntelligence Base modifier for characters' magical ability
+    constructor(uint256 _baseEndurance, uint256 _baseIntelligence) {
+        baseEndurance = _baseEndurance;
+        baseIntelligence = _baseIntelligence;
+    }
 
     ////////////////////////////////////////////////////////////////////////
     /// Character actions
@@ -99,7 +108,7 @@ contract _Character is ICharacter {
     }
 
     /// @notice Helper function to build character attributes given a seed
-    function buildCharacter(uint256 _seed) public pure returns (Character memory) {
+    function buildCharacter(uint256 _seed) public view returns (Character memory) {
         uint256 enduranceBonus = _seed % 6;
         uint256 intelligenceBonus = 5 - enduranceBonus;
 
@@ -107,7 +116,7 @@ contract _Character is ICharacter {
             created: true,
             maxHp: 100 * (baseEndurance + enduranceBonus),
             physicalDamage: 10 * (baseEndurance + enduranceBonus),
-            heal: baseHeal + 10 * (baseIntelligence + intelligenceBonus),
+            heal: 10 * (baseIntelligence + intelligenceBonus),
             hp: 100 * (baseEndurance + enduranceBonus),
             xp: 0
         });

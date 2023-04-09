@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "../src/Game.sol";
 
-contract GameTest is Test, IBoss, ICharacter {
+contract GameTest is Test, IOwnable, IBoss, ICharacter {
     Game public game;
     address public owner = address(1);
     Boss boss = Boss({name: "Test Boss", maxHp: 1000, hp: 1000, damage: 50, xpReward: 10000});
@@ -15,7 +15,7 @@ contract GameTest is Test, IBoss, ICharacter {
     address public healerAddress = address(3);
 
     function setUp() public {
-        game = new Game(owner);
+        game = new Game({_owner: owner, _baseEndurance: 10, _baseIntelligence: 10});
         vm.prank(characterAddress);
         game.newCharacter();
 
@@ -36,7 +36,7 @@ contract GameTest is Test, IBoss, ICharacter {
         address notOwner = address(2);
         vm.startPrank(notOwner);
 
-        vm.expectRevert(Ownable.NotOwner.selector);
+        vm.expectRevert(IOwnable.NotOwner.selector);
         game.setBoss(boss);
     }
 

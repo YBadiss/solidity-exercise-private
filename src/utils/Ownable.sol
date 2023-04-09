@@ -6,13 +6,26 @@ interface IOwnableEvents {
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 }
 
-contract Ownable is IOwnableEvents {
+interface IOwnable is IOwnableEvents {
+    /// Errors
+    error NotOwner();
+}
+
+contract Ownable is IOwnable {
     // TODO how do I properly define that we support interface 0x7f5828d0?
 
     address public owner;
 
-    /// Errors
-    error NotOwner();
+    /// @notice Instantiate a new contract and set its owner
+    /// @param _owner New owner of the contract
+    constructor(address _owner)
+    {
+        owner = _owner;
+        emit OwnershipTransferred({
+            previousOwner: address(0),
+            newOwner: owner
+        });
+    }
 
     /// @notice Modifier to enforce ownership control
     modifier onlyOwner {

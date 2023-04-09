@@ -33,15 +33,13 @@ contract Game is Ownable, _Boss, _Character {
     address[] public charactersInvolvedInFight;
 
     /// @notice Instantiate a new contract and set its owner
-    /// @dev `owner` is defined in the Ownable interface
     /// @param _owner New owner of the contract
-    constructor(address _owner) {
-        owner = _owner;
-        emit OwnershipTransferred({
-            previousOwner: address(0),
-            newOwner: owner
-        });
-    }
+    /// @param _baseEndurance Base modifier for characters' max hp and physical damage
+    /// @param _baseIntelligence Base modifier for characters' magical ability
+    constructor(address _owner, uint256 _baseEndurance, uint256 _baseIntelligence)
+        Ownable(_owner)
+        _Character(_baseEndurance, _baseIntelligence)
+    {}
 
     ////////////////////////////////////////////////////////////////////////
     /// Character actions

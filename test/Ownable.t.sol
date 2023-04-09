@@ -2,11 +2,10 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
-import "../src/Game.sol";
 import "../src/utils/Ownable.sol";
 
 contract OwnableTest is Test, IOwnableEvents {
-    Game public game;
+    Ownable public ownable;
     address public owner = address(1);
 
     function setUp() public {
@@ -16,7 +15,7 @@ contract OwnableTest is Test, IOwnableEvents {
             newOwner: owner
         });
 
-        game = new Game(owner);
+        ownable = new Ownable(owner);
     }
 
     function test_transferOwnership() public {
@@ -28,8 +27,8 @@ contract OwnableTest is Test, IOwnableEvents {
             newOwner: newOwner
         });
         vm.prank(owner);
-        game.transferOwnership(newOwner);
-        assertEq(game.owner(), newOwner);
+        ownable.transferOwnership(newOwner);
+        assertEq(ownable.owner(), newOwner);
 
         vm.expectEmit();
         emit OwnershipTransferred({
@@ -37,15 +36,15 @@ contract OwnableTest is Test, IOwnableEvents {
             newOwner: owner
         });
         vm.prank(newOwner);
-        game.transferOwnership(owner);
-        assertEq(game.owner(), owner);
+        ownable.transferOwnership(owner);
+        assertEq(ownable.owner(), owner);
     }
 
     function test_transferOwnership_RevertIf_notOwner() public {
         address notOwner = address(2);
         vm.startPrank(notOwner);
 
-        vm.expectRevert(Ownable.NotOwner.selector);
-        game.transferOwnership(notOwner);
+        vm.expectRevert(IOwnable.NotOwner.selector);
+        ownable.transferOwnership(notOwner);
     }
 }

@@ -9,7 +9,7 @@ contract CharacterTest is Test, ICharacter {
     address public characterAddress = address(2);
 
     function setUp() public {
-        characterContract = new _Character();
+        characterContract = new _Character({_baseEndurance: 10, _baseIntelligence: 10});
     }
 
     function test_newCharacter() public {
