@@ -23,7 +23,7 @@ import "./Boss.sol";
 /// 6. As a user I want to be able to claim rewards, such as experience, when defeating bosses.
 ///      - Only characters who attacked a boss can receive experience as reward.
 ///      - Only characters who are alive can receive experience as reward.
-contract Game is Ownable, IBoss, Characters {
+contract Game is Ownable, _Boss, _Character {
     ////////////////////////////////////////////////////////////////////////
     /// Game mechanic
     ////////////////////////////////////////////////////////////////////////
@@ -51,16 +51,8 @@ contract Game is Ownable, IBoss, Characters {
     /// @dev Only for the owner, and if the boss is already dead
     /// @param _boss New boss to set
     function setBoss(Boss memory _boss) external onlyOwner {
-        if (!this.isBossDead()) revert BossIsNotDead();
-
         distributeRewards();
-        boss = _boss;
-        emit BossSpawned({
-            bossName: boss.name,
-            maxHp: boss.maxHp,
-            damage: boss.damage,
-            xpReward: boss.xpReward
-        });
+        _setBoss(_boss);
     }
 
     /// @notice Fight with the Boss using the character of the caller
@@ -169,49 +161,5 @@ contract Game is Ownable, IBoss, Characters {
     function calculateHpHealed(uint256 _heal, Character memory _targetCharacter) public pure returns (uint256) {
         uint256 missingHp = _targetCharacter.maxHp - _targetCharacter.hp;
         return missingHp >= _heal ? _heal : missingHp;
-    }
-
-    ////////////////////////////////////////////////////////////////////////
-    /// All about the boss
-    ////////////////////////////////////////////////////////////////////////
-
-    /// @notice Current Boss characters can fight against
-    Boss public boss;
-
-    /// @notice Get the name of the boss
-    /// @return string Name of the boss
-    function bossName() external view returns(string memory) {
-        return boss.name;
-    }
-    
-    /// @notice Get the max HP of the boss
-    /// @return uint256 Max HP of the boss
-    function bossMaxHp() external view returns(uint256) {
-        return boss.maxHp;
-    }
-    
-    /// @notice Get the hp of the boss
-    /// @return uint256 Current HP of the boss
-    function bossHp() external view returns(uint256) {
-        return boss.hp;
-    }
-    
-    /// @notice Get the damage inflicted by the boss on each attack
-    /// @return uint256 Damage inflicted
-    function bossDamage() external view returns(uint256) {
-        return boss.damage;
-    }
-    
-    /// @notice Get the xp reward split between all fighters when the boss dies
-    /// @return uint256 XP reward
-    function bossXpReward() external view returns(uint256) {
-        return boss.xpReward;
-    }
-
-    /// @notice Check if the Boss is dead
-    /// @dev hp is unsigned, we don't check negative values
-    /// @return bool true if dead, false otherwise
-    function isBossDead() view public returns(bool) {
-        return boss.hp == 0;
     }
 }

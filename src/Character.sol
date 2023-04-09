@@ -44,7 +44,7 @@ interface ICharacter is ICharacterEvents {
 /// @author Yacine B. Badiss
 /// @notice Internal contract to handle characters
 /// @dev Internal contract to handle characters
-contract Characters is ICharacter {
+contract _Character is ICharacter {
     /// @notice Track all the characters of the game
     mapping(address => Character) public characters;
 

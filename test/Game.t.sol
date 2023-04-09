@@ -22,12 +22,30 @@ contract GameTest is Test, IBoss, ICharacter {
         // Give some xp to the healer
         vm.prank(owner);
         game.setBoss(weakBoss);
+
         vm.startPrank(healerAddress);
         game.newCharacter();
         game.fightBoss();
         vm.stopPrank();
+        
         vm.prank(owner);
         game.distributeRewards();
+    }
+
+    function test_setBoss_RevertIf_notOwner() public {
+        address notOwner = address(2);
+        vm.startPrank(notOwner);
+
+        vm.expectRevert(Ownable.NotOwner.selector);
+        game.setBoss(boss);
+    }
+
+    function test_setBoss_RevertIf_notDead() public {
+        vm.startPrank(owner);
+        game.setBoss(boss);
+
+        vm.expectRevert(IBoss.BossIsNotDead.selector);
+        game.setBoss(boss);
     }
 
     function test_bossTakesHit() public {
