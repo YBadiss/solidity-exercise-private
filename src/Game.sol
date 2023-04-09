@@ -117,10 +117,13 @@ contract Game is Ownable, _Boss, _Character {
 
     /// @notice Set a new Boss
     /// @dev Only for the owner, and if the boss is already dead
-    /// @param _boss New boss to set
-    function setBoss(Boss memory _boss) public override onlyOwner {
+    /// @param _name Name of the new boss
+    /// @param _maxHp Starting and max hp of the new boss
+    /// @param _damage Damage inflicted by the new boss
+    /// @param _xpReward Experience reward given by the new boss
+    function setBoss(string memory _name, uint32 _maxHp, uint32 _damage, uint32 _xpReward) public override onlyOwner {
         distributeRewards();
-        super.setBoss(_boss);
+        super.setBoss(_name, _maxHp, _damage, _xpReward);
     }
 
     /// @notice Distribute rewards to all characters that fought the boss, and are still alive

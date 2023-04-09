@@ -24,7 +24,7 @@ contract BossTest is Test, IBoss {
             damage: boss.damage,
             xpReward: boss.xpReward
         });
-        bossContract.setBoss(boss);
+        bossContract.setBoss({_name: boss.name, _maxHp: boss.maxHp, _damage: boss.damage, _xpReward: boss.xpReward});
         assertFalse(bossContract.isBossDead());
     }
 }

@@ -40,11 +40,20 @@ contract _Boss is IBoss {
 
     /// @notice Set a new Boss
     /// @dev Only if the boss is already dead
-    /// @param _boss New boss to set
-    function setBoss(Boss memory _boss) public virtual {
+    /// @param _name Name of the new boss
+    /// @param _maxHp Starting and max hp of the new boss
+    /// @param _damage Damage inflicted by the new boss
+    /// @param _xpReward Experience reward given by the new boss
+    function setBoss(string memory _name, uint32 _maxHp, uint32 _damage, uint32 _xpReward) public virtual {
         if (!this.isBossDead()) revert BossIsNotDead();
 
-        boss = _boss;
+        boss = Boss({
+            name: _name,
+            maxHp: _maxHp,
+            hp: _maxHp,
+            damage: _damage,
+            xpReward: _xpReward
+        });
         emit BossSpawned({
             bossName: boss.name,
             maxHp: boss.maxHp,

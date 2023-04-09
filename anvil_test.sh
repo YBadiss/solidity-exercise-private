@@ -29,9 +29,9 @@ export GAME=0x054c25aAEd52d3f55942C6D1cfdeBce50895Db56
 # Verify ownership
 cast rpc anvil_impersonateAccount $OWNER
 assertEq $(cast call $GAME "owner()(address)") $OWNER
-cast send $GAME --from $OWNER "transferOwnership(address)" $FUNDED_ADDRESS
-assertEq $(cast call $GAME "owner()(address)") $FUNDED_ADDRESS
-cast send $GAME --from $FUNDED_ADDRESS "transferOwnership(address)" $OWNER
+cast send $GAME --from $OWNER "transferOwnership(address)" $CHARACTER_1
+assertEq $(cast call $GAME "owner()(address)") $CHARACTER_1
+cast send $GAME --from $CHARACTER_1 "transferOwnership(address)" $OWNER
 assertEq $(cast call $GAME "owner()(address)") $OWNER
 
 # Create characters
@@ -43,18 +43,12 @@ cast send $GAME --from $CHARACTER_3 "newCharacter()"
 cast call $GAME "characters(address)(bool,uint32,uint32,uint32,uint32,uint64)" $CHARACTER_3
 
 # Set a boss
-cast send $GAME --from $OWNER "setBoss((string,uint32,uint32,uint32,uint32))" '("Smoll Dragon",200,200,10,1000)'
+cast send $GAME --from $OWNER "setBoss(string,uint32,uint32,uint32)" "Smoll Dragon" 200 10 1000
 cast call $GAME "boss()(string,uint32,uint32,uint32,uint32)"
 
 # Fight!
 cast send $GAME --from $CHARACTER_1 "fightBoss()"
-cast call $GAME "boss()(string,uint32,uint32,uint32,uint32)"
-cast call $GAME "characters(address)(bool,uint32,uint32,uint32,uint32,uint64)" $CHARACTER_1
-
 cast send $GAME --from $CHARACTER_2 "fightBoss()"
-cast call $GAME "boss()(string,uint32,uint32,uint32,uint32)"
-cast call $GAME "characters(address)(bool,uint32,uint32,uint32,uint32,uint64)" $CHARACTER_2
-
 assertEq $(cast call $GAME "isBossDead()(bool)") "true"
 
 # Rewards

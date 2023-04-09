@@ -21,7 +21,7 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
 
         // Give some xp to the healer
         vm.prank(owner);
-        game.setBoss(weakBoss);
+        game.setBoss({_name: weakBoss.name, _maxHp: weakBoss.maxHp, _damage: weakBoss.damage, _xpReward: weakBoss.xpReward});
 
         vm.startPrank(healerAddress);
         game.newCharacter();
@@ -37,20 +37,20 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
         vm.startPrank(notOwner);
 
         vm.expectRevert(IOwnable.NotOwner.selector);
-        game.setBoss(boss);
+        game.setBoss({_name: boss.name, _maxHp: boss.maxHp, _damage: boss.damage, _xpReward: boss.xpReward});
     }
 
     function test_setBoss_RevertIf_notDead() public {
         vm.startPrank(owner);
-        game.setBoss(boss);
+        game.setBoss({_name: boss.name, _maxHp: boss.maxHp, _damage: boss.damage, _xpReward: boss.xpReward});
 
         vm.expectRevert(IBoss.BossIsNotDead.selector);
-        game.setBoss(boss);
+        game.setBoss({_name: boss.name, _maxHp: boss.maxHp, _damage: boss.damage, _xpReward: boss.xpReward});
     }
 
     function test_bossTakesHit() public {
         vm.prank(owner);
-        game.setBoss(boss);
+        game.setBoss({_name: boss.name, _maxHp: boss.maxHp, _damage: boss.damage, _xpReward: boss.xpReward});
 
         uint32 newBossHp = game.bossHp() - game.characterPhysicalDamage(characterAddress);
         uint32 newCharacterHp = game.characterHp(characterAddress) - game.bossDamage();
@@ -70,7 +70,7 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
 
     function test_bossHpAlwaysAboveZero() public {
         vm.prank(owner);
-        game.setBoss(weakBoss);
+        game.setBoss({_name: weakBoss.name, _maxHp: weakBoss.maxHp, _damage: weakBoss.damage, _xpReward: weakBoss.xpReward});
 
         uint32 newCharacterHp = game.characterHp(characterAddress) - game.bossDamage();
         vm.expectEmit();
@@ -87,7 +87,7 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
 
     function test_characterHpAlwaysAboveZero() public {
         vm.prank(owner);
-        game.setBoss(strongBoss);
+        game.setBoss({_name: strongBoss.name, _maxHp: strongBoss.maxHp, _damage: strongBoss.damage, _xpReward: strongBoss.xpReward});
 
         uint32 newBossHp = game.bossHp() - game.characterPhysicalDamage(characterAddress);
         vm.expectEmit();
@@ -111,7 +111,7 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
 
     function test_fightBoss_RevertsIf_characterNotCreated() public {
         vm.prank(owner);
-        game.setBoss(boss);
+        game.setBoss({_name: boss.name, _maxHp: boss.maxHp, _damage: boss.damage, _xpReward: boss.xpReward});
 
         address notCharacterAddress = address(0);
         vm.prank(notCharacterAddress);
@@ -122,7 +122,7 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
 
     function test_fightBoss_RevertsIf_characterIsDead() public {
         vm.prank(owner);
-        game.setBoss(strongBoss);
+        game.setBoss({_name: strongBoss.name, _maxHp: strongBoss.maxHp, _damage: strongBoss.damage, _xpReward: strongBoss.xpReward});
 
         vm.startPrank(characterAddress);
         game.fightBoss();
@@ -132,7 +132,7 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
 
     function test_healCharacter() public {
         vm.prank(owner);
-        game.setBoss(strongBoss);
+        game.setBoss({_name: strongBoss.name, _maxHp: strongBoss.maxHp, _damage: strongBoss.damage, _xpReward: strongBoss.xpReward});
 
         vm.prank(characterAddress);
         game.fightBoss();
@@ -161,7 +161,7 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
 
     function test_distributeRewards() public {
         vm.prank(owner);
-        game.setBoss(strongBoss);
+        game.setBoss({_name: strongBoss.name, _maxHp: strongBoss.maxHp, _damage: strongBoss.damage, _xpReward: strongBoss.xpReward});
 
         // We hit the boss until it's about to die
         uint160 size = game.bossHp() / game.characterPhysicalDamage(characterAddress) - 1;
