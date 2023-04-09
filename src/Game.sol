@@ -23,7 +23,7 @@ import "./Boss.sol";
 /// 6. As a user I want to be able to claim rewards, such as experience, when defeating bosses.
 ///      - Only characters who attacked a boss can receive experience as reward.
 ///      - Only characters who are alive can receive experience as reward.
-contract Game is Ownable, IBoss, ICharacter {
+contract Game is Ownable, IBoss, Characters {
     ////////////////////////////////////////////////////////////////////////
     /// Game mechanic
     ////////////////////////////////////////////////////////////////////////
@@ -36,18 +36,11 @@ contract Game is Ownable, IBoss, ICharacter {
     /// @dev Used for rewards, reset after distributing rewards.
     address[] public charactersInvolvedInFight;
 
-    uint256 public immutable baseEndurance;
-    uint256 public immutable baseIntelligence;
-    uint256 public immutable baseHeal;
-
     /// @notice Instantiate a new contract and set its owner
     /// @dev `owner` is defined in the Ownable interface
     /// @param _owner New owner of the contract
     constructor(address _owner) {
         owner = _owner;
-        baseEndurance = 10;
-        baseIntelligence = 10;
-        baseHeal = 100;
         emit OwnershipTransferred({
             previousOwner: address(0),
             newOwner: owner
@@ -176,109 +169,6 @@ contract Game is Ownable, IBoss, ICharacter {
     function calculateHpHealed(uint256 _heal, Character memory _targetCharacter) public pure returns (uint256) {
         uint256 missingHp = _targetCharacter.maxHp - _targetCharacter.hp;
         return missingHp >= _heal ? _heal : missingHp;
-    }
-
-    ////////////////////////////////////////////////////////////////////////
-    /// All about the characters
-    ////////////////////////////////////////////////////////////////////////
-
-    /// @notice Track all the characters of the game
-    mapping(address => Character) public characters;
-
-    /// @notice Modifier to only allow characters that exist and are currently alive
-    modifier onlyAliveCharacter {
-        // Don't allow using a character not created
-        if (!isCharacterCreated(msg.sender)) revert CharacterNotCreated();
-        // Don't allow using a character that is not alive
-        if (!isCharacterAlive(msg.sender)) revert CharacterIsDead();
-        _;
-    }
-
-    /// @notice Modifier to only allow characters that have earned xp
-    modifier onlyExperiencedCharacter {
-        if (characters[msg.sender].xp == 0) revert CharacterNotExperienced();
-        _;
-    }
-
-    /// @notice Helper function to build character attributes given a seed
-    function buildCharacter(uint256 _seed) public view returns (Character memory) {
-        uint256 enduranceBonus = _seed % 6;
-        uint256 intelligenceBonus = 5 - enduranceBonus;
-
-        return Character({
-            created: true,
-            maxHp: 100 * (baseEndurance + enduranceBonus),
-            physicalDamage: 10 * (baseEndurance + enduranceBonus),
-            heal: baseHeal + 10 * (baseIntelligence + intelligenceBonus),
-            hp: 100 * (baseEndurance + enduranceBonus),
-            xp: 0
-        });
-    }
-
-    /// @notice Register a new character for the caller
-    function newCharacter() external {
-        if (characters[msg.sender].created) revert CharacterAlreadyCreated();
-
-        characters[msg.sender] = buildCharacter(block.prevrandao);
-        emit CharacterSpawned({
-            characterAddress: msg.sender,
-            maxHp: characters[msg.sender].maxHp,
-            physicalDamage: characters[msg.sender].physicalDamage,
-            heal: characters[msg.sender].heal
-        });
-    }
-
-    /// @notice Indicates if the target address has already created a Character
-    /// @param _characterAddress Address of the Character to check
-    function isCharacterCreated(address _characterAddress) public view returns (bool) {
-        return characters[_characterAddress].created;
-    }
-
-    /// @notice Indicates if the target Character is alive
-    /// @param _characterAddress Address of the Character to check
-    function isCharacterAlive(address _characterAddress) public view returns (bool) {
-        return characters[_characterAddress].hp > 0;
-    }
-
-    /// @notice Indicates if the target Character can heal others
-    /// @param _characterAddress Address of the Character to check
-    function canCharacterHeal(address _characterAddress) public view returns (bool) {
-        return characters[_characterAddress].xp > 0;
-    }
-
-    /// @notice Get the max HP of the character
-    /// @param _characterAddress Address of the Character to check
-    /// @return uint256 Max HP of the character
-    function characterMaxHp(address _characterAddress) public view returns (uint256) {
-        return characters[_characterAddress].maxHp;
-    }
-
-    /// @notice Get the physical damage the character deals
-    /// @param _characterAddress Address of the Character to check
-    /// @return uint256 Physical Damage of the character
-    function characterPhysicalDamage(address _characterAddress) public view returns (uint256) {
-        return characters[_characterAddress].physicalDamage;
-    }
-
-    /// @notice Get the amount of healing provided by the character
-    /// @param _characterAddress Address of the Character to check
-    /// @return uint256 Heal of the character
-    function characterHeal(address _characterAddress) public view returns (uint256) {
-        return characters[_characterAddress].heal;
-    }
-
-    /// @notice Get the current HP of the character
-    /// @param _characterAddress Address of the Character to check
-    /// @return uint256 Current HP of the character
-    function characterHp(address _characterAddress) public view returns (uint256) {
-        return characters[_characterAddress].hp;
-    }
-
-    /// @notice Get the current XP of the character
-    /// @param _characterAddress Address of the Character to check
-    /// @return uint256 Current XP of the character
-    function characterXp(address _characterAddress) public view returns (uint256) {
-        return characters[_characterAddress].xp;
     }
 
     ////////////////////////////////////////////////////////////////////////
