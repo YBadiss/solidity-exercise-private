@@ -52,8 +52,8 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
         vm.prank(owner);
         game.setBoss(boss);
 
-        uint256 newBossHp = game.bossHp() - game.characterPhysicalDamage(characterAddress);
-        uint256 newCharacterHp = game.characterHp(characterAddress) - game.bossDamage();
+        uint32 newBossHp = game.bossHp() - game.characterPhysicalDamage(characterAddress);
+        uint32 newCharacterHp = game.characterHp(characterAddress) - game.bossDamage();
         vm.expectEmit();
         emit BossIsHit(game.bossName(), characterAddress, newBossHp, game.characterPhysicalDamage(characterAddress));
         vm.expectEmit();
@@ -72,7 +72,7 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
         vm.prank(owner);
         game.setBoss(weakBoss);
 
-        uint256 newCharacterHp = game.characterHp(characterAddress) - game.bossDamage();
+        uint32 newCharacterHp = game.characterHp(characterAddress) - game.bossDamage();
         vm.expectEmit();
         emit BossIsHit(game.bossName(), characterAddress, 0, game.bossHp());
         vm.expectEmit();
@@ -89,7 +89,7 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
         vm.prank(owner);
         game.setBoss(strongBoss);
 
-        uint256 newBossHp = game.bossHp() - game.characterPhysicalDamage(characterAddress);
+        uint32 newBossHp = game.bossHp() - game.characterPhysicalDamage(characterAddress);
         vm.expectEmit();
         emit BossIsHit(game.bossName(), characterAddress, newBossHp, game.characterPhysicalDamage(characterAddress));
         vm.expectEmit();
@@ -164,7 +164,7 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
         game.setBoss(strongBoss);
 
         // We hit the boss until it's about to die
-        uint size = game.bossHp() / game.characterPhysicalDamage(characterAddress) - 1;
+        uint160 size = game.bossHp() / game.characterPhysicalDamage(characterAddress) - 1;
         address[] memory deadCharacters = new address[](size);
         for (uint160 index = 0; index < size; index++) {
             address deadCharacter = address(index + 4);
@@ -182,8 +182,8 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
         // Heal our character because it's dead
         vm.prank(healerAddress);
         game.healCharacter(characterAddress);
-        uint256 healerXp = game.characterXp(healerAddress);
-        uint256 expectedReward = game.characterPhysicalDamage(characterAddress) * game.bossXpReward() / game.bossMaxHp();
+        uint64 healerXp = game.characterXp(healerAddress);
+        uint32 expectedReward = uint32(uint64(game.characterPhysicalDamage(characterAddress)) * game.bossXpReward() / game.bossMaxHp());
 
         vm.expectEmit();
         emit CharacterRewarded({

@@ -26,7 +26,8 @@ import "./Boss.sol";
 contract Game is Ownable, _Boss, _Character {
     /// @notice Track damage dealt to the current boss by the characters.
     /// @dev Used for rewards, reset after distributing rewards.
-    mapping(address => uint256) public damageDealtToBoss;
+    /// The total damage dealt by individual characters is always smaller than boss.maxHp, so uint32 is enough.
+    mapping(address => uint32) public damageDealtToBoss;
 
     /// @notice Tracks characters that have hit the current boss.
     /// @dev Used for rewards, reset after distributing rewards.
@@ -36,7 +37,7 @@ contract Game is Ownable, _Boss, _Character {
     /// @param _owner New owner of the contract
     /// @param _baseEndurance Base modifier for characters' max hp and physical damage
     /// @param _baseIntelligence Base modifier for characters' magical ability
-    constructor(address _owner, uint256 _baseEndurance, uint256 _baseIntelligence)
+    constructor(address _owner, uint8 _baseEndurance, uint8 _baseIntelligence)
         Ownable(_owner)
         _Character(_baseEndurance, _baseIntelligence)
     {}
@@ -53,10 +54,10 @@ contract Game is Ownable, _Boss, _Character {
         address characterAddress = msg.sender;
         Character memory character = characters[characterAddress];
 
-        uint256 damageDealtByCharacter = calculateDamageDealt(character.physicalDamage, boss.hp);
+        uint32 damageDealtByCharacter = calculateDamageDealt(character.physicalDamage, boss.hp);
         boss.hp -= damageDealtByCharacter;
 
-        uint256 damageDealtByBoss = calculateDamageDealt(boss.damage, character.hp);
+        uint32 damageDealtByBoss = calculateDamageDealt(boss.damage, character.hp);
         character.hp -= damageDealtByBoss;
         characters[characterAddress] = character;
 
@@ -98,7 +99,7 @@ contract Game is Ownable, _Boss, _Character {
         if (_targetCharacter == msg.sender) revert CharacterCannotSelfHeal();
         if (!isCharacterCreated(_targetCharacter)) revert CharacterNotCreated();
 
-        uint256 healAmount = calculateHpHealed(characters[msg.sender].heal, characters[_targetCharacter]);
+        uint32 healAmount = calculateHpHealed(characters[msg.sender].heal, characters[_targetCharacter]);
         if (healAmount > 0) {
             characters[_targetCharacter].hp += healAmount;
             emit CharacterHealed({
@@ -132,8 +133,11 @@ contract Game is Ownable, _Boss, _Character {
 
             if (isCharacterAlive(characterAddress)) {
                 // Only give out XP if the character is still alive
-                uint256 totalDamageDealt = damageDealtToBoss[characterAddress];
-                uint256 xpReward = (totalDamageDealt * boss.xpReward) / boss.maxHp;
+                uint32 totalDamageDealt = damageDealtToBoss[characterAddress];
+                // `xpReward` is always smaller than `boss.xpReward` since `(totalDamageDealt / boss.maxHp) <= 1`
+                // so it will always fit in a uint32.
+                // We however need to explicitely cast `totalDamageDealt` to a larger number to be able to do the computation.
+                uint32 xpReward = uint32((uint64(totalDamageDealt) * boss.xpReward) / boss.maxHp);
                 characters[characterAddress].xp += xpReward;
                 emit CharacterRewarded({
                     characterAddress: characterAddress,

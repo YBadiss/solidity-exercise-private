@@ -3,9 +3,9 @@ pragma solidity >=0.8.13;
 
 interface IBossEvents {
     /// @dev This emits when the Boss is created.
-    event BossSpawned(string indexed bossName, uint256 maxHp, uint256 damage, uint256 xpReward);
+    event BossSpawned(string indexed bossName, uint32 maxHp, uint32 damage, uint32 xpReward);
     /// @dev This emits when the Boss is hit.
-    event BossIsHit(string indexed bossName, address indexed characterAddress, uint256 bossHp, uint256 damageDealt);
+    event BossIsHit(string indexed bossName, address indexed characterAddress, uint32 bossHp, uint32 damageDealt);
     /// @dev This emits when the Boss dies.
     event BossKilled(string indexed bossName, address indexed characterAddress);
 }
@@ -19,10 +19,10 @@ interface IBoss is IBossEvents {
     /// @param xpReward Experience reward split between all fighters
     struct Boss {
         string name;
-        uint256 maxHp;
-        uint256 hp;
-        uint256 damage;
-        uint256 xpReward;
+        uint32 maxHp;
+        uint32 hp;
+        uint32 damage;
+        uint32 xpReward;
     }
 
     /// Errors
@@ -64,26 +64,26 @@ contract _Boss is IBoss {
     }
     
     /// @notice Get the max HP of the boss
-    /// @return uint256 Max HP of the boss
-    function bossMaxHp() external view returns(uint256) {
+    /// @return uint32 Max HP of the boss
+    function bossMaxHp() external view returns(uint32) {
         return boss.maxHp;
     }
     
     /// @notice Get the hp of the boss
-    /// @return uint256 Current HP of the boss
-    function bossHp() external view returns(uint256) {
+    /// @return uint32 Current HP of the boss
+    function bossHp() external view returns(uint32) {
         return boss.hp;
     }
     
     /// @notice Get the damage inflicted by the boss on each attack
-    /// @return uint256 Damage inflicted
-    function bossDamage() external view returns(uint256) {
+    /// @return uint32 Damage inflicted
+    function bossDamage() external view returns(uint32) {
         return boss.damage;
     }
     
     /// @notice Get the xp reward split between all fighters when the boss dies
-    /// @return uint256 XP reward
-    function bossXpReward() external view returns(uint256) {
+    /// @return uint32 XP reward
+    function bossXpReward() external view returns(uint32) {
         return boss.xpReward;
     }
 

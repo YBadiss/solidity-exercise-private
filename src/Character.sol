@@ -3,13 +3,13 @@ pragma solidity >=0.8.13;
 
 interface ICharacterEvents {
     /// @dev This emits when the Character is created.
-    event CharacterSpawned(address indexed characterAddress, uint256 maxHp, uint256 physicalDamage, uint256 heal);
+    event CharacterSpawned(address indexed characterAddress, uint32 maxHp, uint32 physicalDamage, uint32 heal);
     /// @dev This emits when the Character is hit.
-    event CharacterIsHit(address indexed characterAddress, string indexed bossName, uint256 characterHp, uint256 damageDealt);
+    event CharacterIsHit(address indexed characterAddress, string indexed bossName, uint32 characterHp, uint32 damageDealt);
     /// @dev This emits when the Character is hit.
-    event CharacterHealed(address indexed characterAddress, address indexed healerAddress, uint256 characterHp, uint256 healAmount);
+    event CharacterHealed(address indexed characterAddress, address indexed healerAddress, uint32 characterHp, uint32 healAmount);
     /// @dev This emits when the Character receives xp rewards.
-    event CharacterRewarded(address indexed characterAddress, string indexed bossName, uint256 xpReward, uint256 totalDamageDealt);
+    event CharacterRewarded(address indexed characterAddress, string indexed bossName, uint32 xpReward, uint32 totalDamageDealt);
     /// @dev This emits when the Character dies.
     event CharacterKilled(address indexed characterAddress, string indexed bossName);
 }
@@ -25,11 +25,15 @@ interface ICharacter is ICharacterEvents {
     /// @param xp Experience earned by the Character
     struct Character {
         bool created;
-        uint256 maxHp;
-        uint256 physicalDamage;
-        uint256 heal;
-        uint256 hp;
-        uint256 xp;
+        uint32 maxHp;
+        uint32 physicalDamage;
+        uint32 heal;
+        uint32 hp;
+        // Use uint64 to keep Character under 1 slot of 32 bytes.
+        // It will grow by a max of uint32 for each Boss killed, which means a Character has to kill
+        // 2^32 Bosses with `xpReward == uint32.max` alone to fill up this XP counter.
+        // That's beyond the scope of this project.
+        uint64 xp;
     }
 
     /// Errors
@@ -49,15 +53,15 @@ contract _Character is ICharacter {
     mapping(address => Character) public characters;
 
     /// @notice Base modifier for characters' max hp and physical damage
-    uint256 public immutable baseEndurance;
+    uint8 public immutable baseEndurance;
     /// @notice Base modifier for characters' magical ability
-    uint256 public immutable baseIntelligence;
+    uint8 public immutable baseIntelligence;
 
     /// @notice Instantiate a new contract and set the base modifiers
     /// @dev Not meant to be deployed by itself, use with `Game` contract
     /// @param _baseEndurance Base modifier for characters' max hp and physical damage
     /// @param _baseIntelligence Base modifier for characters' magical ability
-    constructor(uint256 _baseEndurance, uint256 _baseIntelligence) {
+    constructor(uint8 _baseEndurance, uint8 _baseIntelligence) {
         baseEndurance = _baseEndurance;
         baseIntelligence = _baseIntelligence;
     }
@@ -109,8 +113,9 @@ contract _Character is ICharacter {
 
     /// @notice Helper function to build character attributes given a seed
     function buildCharacter(uint256 _seed) public view returns (Character memory) {
-        uint256 enduranceBonus = _seed % 6;
-        uint256 intelligenceBonus = 5 - enduranceBonus;
+        // Conversion ok since max is 5. Using uint32 since we will be adding to it later.
+        uint32 enduranceBonus = uint32(_seed % 6);
+        uint32 intelligenceBonus = 5 - enduranceBonus;
 
         return Character({
             created: true,
@@ -142,36 +147,36 @@ contract _Character is ICharacter {
 
     /// @notice Get the max HP of the character
     /// @param _characterAddress Address of the Character to check
-    /// @return uint256 Max HP of the character
-    function characterMaxHp(address _characterAddress) public view returns (uint256) {
+    /// @return uint32 Max HP of the character
+    function characterMaxHp(address _characterAddress) public view returns (uint32) {
         return characters[_characterAddress].maxHp;
     }
 
     /// @notice Get the physical damage the character deals
     /// @param _characterAddress Address of the Character to check
-    /// @return uint256 Physical Damage of the character
-    function characterPhysicalDamage(address _characterAddress) public view returns (uint256) {
+    /// @return uint32 Physical Damage of the character
+    function characterPhysicalDamage(address _characterAddress) public view returns (uint32) {
         return characters[_characterAddress].physicalDamage;
     }
 
     /// @notice Get the amount of healing provided by the character
     /// @param _characterAddress Address of the Character to check
-    /// @return uint256 Heal of the character
-    function characterHeal(address _characterAddress) public view returns (uint256) {
+    /// @return uint32 Heal of the character
+    function characterHeal(address _characterAddress) public view returns (uint32) {
         return characters[_characterAddress].heal;
     }
 
     /// @notice Get the current HP of the character
     /// @param _characterAddress Address of the Character to check
-    /// @return uint256 Current HP of the character
-    function characterHp(address _characterAddress) public view returns (uint256) {
+    /// @return uint32 Current HP of the character
+    function characterHp(address _characterAddress) public view returns (uint32) {
         return characters[_characterAddress].hp;
     }
 
     /// @notice Get the current XP of the character
     /// @param _characterAddress Address of the Character to check
-    /// @return uint256 Current XP of the character
-    function characterXp(address _characterAddress) public view returns (uint256) {
+    /// @return uint64 Current XP of the character
+    function characterXp(address _characterAddress) public view returns (uint64) {
         return characters[_characterAddress].xp;
     }
 
@@ -179,7 +184,7 @@ contract _Character is ICharacter {
     /// @dev Always use to avoid arithmetic errors
     /// @param _damage Amount of damage we're trying to deal
     /// @param _hp Remaining hp
-    function calculateDamageDealt(uint256 _damage, uint256 _hp) public pure returns (uint256) {
+    function calculateDamageDealt(uint32 _damage, uint32 _hp) public pure returns (uint32) {
         return _damage >= _hp ? _hp : _damage;
     }
 
@@ -187,8 +192,8 @@ contract _Character is ICharacter {
     /// @dev Always use to avoid arithmetic errors
     /// @param _heal Amount of healing we're trying to provide
     /// @param _targetCharacter Character to heal
-    function calculateHpHealed(uint256 _heal, Character memory _targetCharacter) public pure returns (uint256) {
-        uint256 missingHp = _targetCharacter.maxHp - _targetCharacter.hp;
+    function calculateHpHealed(uint32 _heal, Character memory _targetCharacter) public pure returns (uint32) {
+        uint32 missingHp = _targetCharacter.maxHp - _targetCharacter.hp;
         return missingHp >= _heal ? _heal : missingHp;
     }
 }
