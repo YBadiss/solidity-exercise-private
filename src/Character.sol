@@ -29,11 +29,18 @@ interface ICharacter is ICharacterEvents {
         uint32 physicalDamage;
         uint32 heal;
         uint32 hp;
-        // Use uint64 to keep Character under 1 slot of 32 bytes.
-        // It will grow by a max of uint32 for each Boss killed, which means a Character has to kill
+        // The xp will grow by a max of uint32 for each Boss killed, which means a Character has to kill
         // 2^32 Bosses with `xpReward == uint32.max` alone to fill up this XP counter.
         // That's beyond the scope of this project.
         uint64 xp;
+    }
+
+    /// @notice Wrapper structure to return characters with their address
+    /// @param addr Address of the character
+    /// @param Character Character
+    struct AddressedCharacter {
+        address addr;
+        Character character;
     }
 
     /// Errors
@@ -55,10 +62,10 @@ contract _Character is ICharacter {
     /// @notice Tracks characters are active
     address[] public activeAddresses;
 
-    /// @notice Get the active character addresses
-    /// @return address[] Addresses with an active character
-    function getActiveAddresses() external view returns (address[] memory) {
-        return activeAddresses;
+    /// @notice Get all the active characters
+    /// @return AddressedCharacter[] Active characters and their addresses
+    function getActiveCharacters() external view returns (AddressedCharacter[] memory) {
+        return getAddressedCharacters(activeAddresses);
     }
 
     /// @notice Base modifier for characters' max hp and physical damage
@@ -205,5 +212,19 @@ contract _Character is ICharacter {
     function calculateHpHealed(uint32 _heal, Character memory _targetCharacter) public pure returns (uint32) {
         uint32 missingHp = _targetCharacter.maxHp - _targetCharacter.hp;
         return missingHp >= _heal ? _heal : missingHp;
+    }
+
+    /// @notice For a list of addresses, retrieve the associated characters
+    /// @param _characterAddresses Addresses of the characters to retrieve
+    /// @return AddressedCharacter[]
+    function getAddressedCharacters(address[] memory _characterAddresses) internal view returns (AddressedCharacter[] memory) {
+        AddressedCharacter[] memory addressedCharacters = new AddressedCharacter[](_characterAddresses.length);
+        for (uint256 i = 0; i < addressedCharacters.length; i++) {
+            addressedCharacters[i] = AddressedCharacter({
+                addr: _characterAddresses[i],
+                character: characters[_characterAddresses[i]]
+            });
+        }
+        return addressedCharacters;
     }
 }

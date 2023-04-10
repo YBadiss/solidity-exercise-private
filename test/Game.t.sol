@@ -51,7 +51,7 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
     function test_bossTakesHit() public {
         vm.prank(owner);
         game.setBoss({_name: boss.name, _maxHp: boss.maxHp, _damage: boss.damage, _xpReward: boss.xpReward});
-        assertEq(game.getAddressesInvolvedInFight().length, 0);
+        assertEq(game.getCharactersInvolvedInFight().length, 0);
 
         uint32 newBossHp = game.bossHp() - game.characterPhysicalDamage(characterAddress);
         uint32 newCharacterHp = game.characterHp(characterAddress) - game.bossDamage();
@@ -65,8 +65,8 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
 
         assertEq(game.bossHp(), newBossHp);
         assertEq(game.characterHp(characterAddress), newCharacterHp);
-        assertEq(game.getAddressesInvolvedInFight().length, 1);
-        assertEq(game.getAddressesInvolvedInFight()[0], characterAddress);
+        assertEq(game.getCharactersInvolvedInFight().length, 1);
+        assertEq(game.getCharactersInvolvedInFight()[0].addr, characterAddress);
         assertEq(game.damageDealtToBoss(characterAddress), game.characterPhysicalDamage(characterAddress));
     }
 

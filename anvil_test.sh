@@ -24,7 +24,7 @@ forge build
 # Deploy the contract
 forge create Game --rpc-url=$ETH_RPC_URL --private-key=$PRIVATE_KEY --constructor-args $OWNER 10 10
 # Keep contract address
-export GAME=0x816C1209974fFac86Cf3639bA11ED299E587754B
+export GAME=0xdDc7203b76f2D1bc710954a62fC7D862186DA952
 # Verify ownership
 cast rpc anvil_impersonateAccount $OWNER
 assertEq $(cast call $GAME "owner()(address)") $OWNER

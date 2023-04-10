@@ -24,11 +24,11 @@ contract CharacterTest is Test, ICharacter {
             heal: character.heal
         });
         assertFalse(characterContract.isCharacterCreated(characterAddress));
-        assertEq(characterContract.getActiveAddresses().length, 0);
+        assertEq(characterContract.getActiveCharacters().length, 0);
         characterContract.newCharacter();
         assertTrue(characterContract.isCharacterCreated(characterAddress));
-        assertEq(characterContract.getActiveAddresses().length, 1);
-        assertEq(characterContract.getActiveAddresses()[0], characterAddress);
+        assertEq(characterContract.getActiveCharacters().length, 1);
+        assertEq(characterContract.getActiveCharacters()[0].addr, characterAddress);
     }
 
     function test_RevertIf_alreadyCreated() public {

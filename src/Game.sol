@@ -33,10 +33,10 @@ contract Game is Ownable, _Boss, _Character {
     /// @dev Used for rewards, reset after distributing rewards.
     address[] public addressesInvolvedInFight;
 
-    /// @notice Get all the addresses involved in the current fight
-    /// @return address[] Character addresses involved in the current fight
-    function getAddressesInvolvedInFight() external view returns (address[] memory) {
-        return addressesInvolvedInFight;
+    /// @notice Get all the characters involved in the current fight
+    /// @return AddressedCharacter[] Characters involved in the current fight
+    function getCharactersInvolvedInFight() external view returns (AddressedCharacter[] memory) {
+        return getAddressedCharacters(addressesInvolvedInFight);
     }
 
     /// @notice Instantiate a new contract and set its owner
