@@ -29,9 +29,15 @@ contract Game is Ownable, _Boss, _Character {
     /// The total damage dealt by individual characters is always smaller than boss.maxHp, so uint32 is enough.
     mapping(address => uint32) public damageDealtToBoss;
 
-    /// @notice Tracks characters that have hit the current boss.
+    /// @notice Tracks addresses that have hit the current boss.
     /// @dev Used for rewards, reset after distributing rewards.
-    address[] public charactersInvolvedInFight;
+    address[] public addressesInvolvedInFight;
+
+    /// @notice Get all the addresses involved in the current fight
+    /// @return address[] Character addresses involved in the current fight
+    function getAddressesInvolvedInFight() external view returns (address[] memory) {
+        return addressesInvolvedInFight;
+    }
 
     /// @notice Instantiate a new contract and set its owner
     /// @param _owner New owner of the contract
@@ -62,7 +68,7 @@ contract Game is Ownable, _Boss, _Character {
         characters[characterAddress] = character;
 
         if (damageDealtToBoss[characterAddress] == 0) {
-            charactersInvolvedInFight.push(characterAddress);
+            addressesInvolvedInFight.push(characterAddress);
         }
         damageDealtToBoss[characterAddress] += damageDealtByCharacter;
         
@@ -131,8 +137,8 @@ contract Game is Ownable, _Boss, _Character {
     function distributeRewards() public onlyOwner {
         if (!this.isBossDead()) revert BossIsNotDead();
 
-        for (uint256 index = 0; index < charactersInvolvedInFight.length; index++) {
-            address characterAddress = charactersInvolvedInFight[index];
+        for (uint256 index = 0; index < addressesInvolvedInFight.length; index++) {
+            address characterAddress = addressesInvolvedInFight[index];
 
             if (isCharacterAlive(characterAddress)) {
                 // Only give out XP if the character is still alive
@@ -152,6 +158,6 @@ contract Game is Ownable, _Boss, _Character {
             damageDealtToBoss[characterAddress] = 0;
         }
         // This can be expensive depending on how many characters were involved
-        delete charactersInvolvedInFight;
+        delete addressesInvolvedInFight;
     }
 }

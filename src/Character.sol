@@ -52,6 +52,15 @@ contract _Character is ICharacter {
     /// @notice Track all the characters of the game
     mapping(address => Character) public characters;
 
+    /// @notice Tracks characters are active
+    address[] public activeAddresses;
+
+    /// @notice Get the active character addresses
+    /// @return address[] Addresses with an active character
+    function getActiveAddresses() external view returns (address[] memory) {
+        return activeAddresses;
+    }
+
     /// @notice Base modifier for characters' max hp and physical damage
     uint8 public immutable baseEndurance;
     /// @notice Base modifier for characters' magical ability
@@ -84,6 +93,7 @@ contract _Character is ICharacter {
         if (characters[msg.sender].created) revert CharacterAlreadyCreated();
 
         characters[msg.sender] = buildCharacter(block.prevrandao);
+        activeAddresses.push(msg.sender);
         emit CharacterSpawned({
             characterAddress: msg.sender,
             maxHp: characters[msg.sender].maxHp,
