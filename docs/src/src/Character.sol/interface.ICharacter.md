@@ -1,5 +1,5 @@
 # ICharacter
-[Git Source](https://github.com/YBadiss/solidity-exercise-private/blob/e73d628aa9e06b66cb5c5a9c7957ecc26a49dec1/src/Character.sol)
+[Git Source](https://github.com/YBadiss/solidity-exercise-private/blob/f14e48d2011704a0c8a698b843deeed8a3b64a94/src/Character.sol)
 
 **Inherits:**
 [ICharacterEvents](/src/Character.sol/interface.ICharacterEvents.md)

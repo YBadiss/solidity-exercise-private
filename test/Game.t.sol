@@ -4,6 +4,8 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "../src/Game.sol";
 
+// TODO Simplify several of these function by better using `vm` and cheats to setup test cases
+
 contract GameTest is Test, IOwnable, IBoss, ICharacter {
     Game public game;
     address public owner = address(1);

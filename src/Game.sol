@@ -9,20 +9,30 @@ import "./Boss.sol";
 /// @author Yacine B. Badiss
 /// @notice Create a character linked to your address and fight monsters!
 /// @dev Main contract controlling the game flow
-/// Rules:
-/// 1. As an owner I want to inherit the admin permissions of the smart contract once it is deployed.
-/// 2. As an admin I want to be the only one able to populate the contract with customizable bosses.
-///      - A new boss can't be populated if the current one isn't defeated.
-///      - A dead character can no longer do anything but can be healed.
-/// 3. As a user I want to be able to pseudo-randomly generate **one** character per address.
-/// 4. As a user I want to be able to attack the current boss with my character.
-///      - Everytime a player attacks the boss, the boss will counterattack. Both will lose life points.
-/// 5. As a user I should be able to heal other characters with my character.
-///      - Players can't heal themselves.
-///      - Only players who have already earned experience can cast the heal spell.
-/// 6. As a user I want to be able to claim rewards, such as experience, when defeating bosses.
-///      - Only characters who attacked a boss can receive experience as reward.
-///      - Only characters who are alive can receive experience as reward.
+///
+/// In this contract, you'll find all the logic of interaction between Characters and Bosses.
+/// We inherit from _Boss and _Character contracts. They should not be used directly: They are
+/// merely code grouping to allow simpler testing and separation of concerns.
+///
+/// I have added several utilities to ease interactions between dApps and the Game contract.
+/// Among those are arrays of addresses tracking Characters, and methods to fetch lists of Characters
+/// with their address. This allows, in very few RPC calls, to get a full state of the game.
+///
+/// ## Rules:
+/// - As an owner I want to inherit the admin permissions of the smart contract once it is deployed.
+/// - As an admin I want to be the only one able to populate the contract with customizable bosses.
+///   - A new boss can't be populated if the current one isn't defeated.
+///   - A dead character can no longer do anything but can be healed.
+/// - As a user I want to be able to pseudo-randomly generate **one** character per address.
+/// - As a user I want to be able to attack the current boss with my character.
+///   - Everytime a player attacks the boss, the boss will counterattack. Both will lose life points.
+/// - As a user I should be able to heal other characters with my character.
+///   - Players can't heal themselves.
+///   - Only players who have already earned experience can cast the heal spell.
+/// - As a user I want to be able to claim rewards, such as experience, when defeating bosses.
+///   - Only characters who attacked a boss can receive experience as reward.
+///   - The experience reward is split between fighting characters, on the basis of how much damage they have dealt.
+///   - Only characters who are alive can receive experience as reward.
 contract Game is Ownable, _Boss, _Character {
     /// @notice Track damage dealt to the current boss by the characters.
     /// @dev Used for rewards, reset after distributing rewards.

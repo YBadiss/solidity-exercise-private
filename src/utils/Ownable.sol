@@ -11,6 +11,8 @@ interface IOwnable is IOwnableEvents {
     error NotOwner();
 }
 
+/// There are multiple extensions from OpenZepplin, 0x, etc. that we could use.
+/// But since Ownable is rather simple to implement, I wanted to do it myself once.
 contract Ownable is IOwnable {
     // TODO how do I properly define that we support interface 0x7f5828d0?
 
