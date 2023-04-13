@@ -18,6 +18,11 @@ contract OwnableTest is Test, IOwnableEvents {
         ownable = new Ownable(owner);
     }
 
+    function test_supportsERC173Interface() public {
+        assertTrue(ownable.supportsInterface(0x7f5828d0));
+        assertFalse(ownable.supportsInterface(0xffffffff));
+    }
+
     function test_transferOwnership() public {
         address newOwner = address(2);
 
