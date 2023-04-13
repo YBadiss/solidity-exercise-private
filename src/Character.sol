@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity >=0.8.13;
+pragma solidity >=0.8.19;
 
 interface ICharacterEvents {
     /// @dev This emits when the Character is created.
@@ -99,7 +99,10 @@ contract _Character is ICharacter {
     function newCharacter() external {
         if (characters[msg.sender].created) revert CharacterAlreadyCreated();
 
-        characters[msg.sender] = buildCharacter(block.prevrandao);
+        // We use block.prevrandao which is sufficiently random for our usecase
+        // and add the number of active characters so that two addresses creating
+        // a character in the same block get two different characters
+        characters[msg.sender] = buildCharacter(block.prevrandao + activeAddresses.length);
         activeAddresses.push(msg.sender);
         emit CharacterSpawned({
             characterAddress: msg.sender,

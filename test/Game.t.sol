@@ -168,33 +168,34 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
         game.setBoss({_name: strongBoss.name, _maxHp: strongBoss.maxHp, _damage: strongBoss.damage, _xpReward: strongBoss.xpReward});
 
         // We hit the boss until it's about to die
-        uint160 size = game.bossHp() / game.characterPhysicalDamage(characterAddress) - 1;
-        address[] memory deadCharacters = new address[](size);
-        for (uint160 index = 0; index < size; index++) {
-            address deadCharacter = address(index + 4);
+        uint160 numberOfDeadCharacters;
+        while (game.bossHp() > 2 * game.characterPhysicalDamage(characterAddress)) {
+            address deadCharacter = address(numberOfDeadCharacters + 4);
+            numberOfDeadCharacters++;
             vm.startPrank(deadCharacter);
             game.newCharacter();
             game.fightBoss();
             vm.stopPrank();
-            deadCharacters[index] = deadCharacter;
         }
         
+        uint32 expectedDamageDealt = game.bossHp();
+        uint32 expectedReward = uint32(uint64(expectedDamageDealt) * game.bossXpReward() / game.bossMaxHp());
         // Finish the boss with our character
-        vm.prank(characterAddress);
-        game.fightBoss();
-
-        // Heal our character because it's dead
-        vm.prank(healerAddress);
-        game.healCharacter(characterAddress);
+        while (!game.isBossDead()) {
+            vm.prank(characterAddress);
+            game.fightBoss();
+            // Heal our character because it's dead
+            vm.prank(healerAddress);
+            game.healCharacter(characterAddress);
+        }
         uint64 healerXp = game.characterXp(healerAddress);
-        uint32 expectedReward = uint32(uint64(game.characterPhysicalDamage(characterAddress)) * game.bossXpReward() / game.bossMaxHp());
 
         vm.expectEmit();
         emit CharacterRewarded({
             characterAddress: characterAddress,
             bossName: game.bossName(),
             xpReward: expectedReward,
-            totalDamageDealt: game.characterPhysicalDamage(characterAddress)
+            totalDamageDealt: expectedDamageDealt
         });
 
         vm.prank(owner);
@@ -204,8 +205,9 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
         // The healer didn't fight, no additional xp
         assertEq(game.characterXp(healerAddress), healerXp);
         // The other fighters are all dead, no xp
-        for (uint160 index = 0; index < deadCharacters.length; index++) {
-            assertEq(game.characterXp(deadCharacters[index]), 0);
+        for (uint160 index = 0; index < numberOfDeadCharacters; index++) {
+            address deadCharacter = address(index + 4);
+            assertEq(game.characterXp(deadCharacter), 0);
         }
     }
 }

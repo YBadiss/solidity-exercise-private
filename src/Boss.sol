@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity >=0.8.13;
+pragma solidity >=0.8.19;
 
 interface IBossEvents {
     /// @dev This emits when the Boss is created.
