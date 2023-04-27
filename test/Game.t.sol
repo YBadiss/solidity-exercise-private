@@ -32,10 +32,12 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
         game.fightBoss();
         vm.stopPrank();
         
-        vm.prank(owner);
-        game.distributeRewards();
+        vm.startPrank(owner);
         // The character must be level 2 or more to heal others
-        assertGe(game.characterLevel(healerAddress), 2);
+        assertFalse(game.canCharacterHeal(healerAddress));
+        game.distributeRewards();
+        assertTrue(game.canCharacterHeal(healerAddress));
+        vm.stopPrank();
     }
 
     function test_setBoss_RevertIf_notOwner() public {

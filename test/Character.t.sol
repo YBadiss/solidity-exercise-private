@@ -21,7 +21,7 @@ contract CharacterTest is Test, ICharacter {
             characterAddress: characterAddress,
             maxHp: character.maxHp,
             physicalDamage: character.physicalDamage,
-            heal: character.heal
+            magicalDamage: character.magicalDamage
         });
         assertFalse(characterContract.isCharacterCreated(characterAddress));
         assertEq(characterContract.getActiveCharacters().length, 0);

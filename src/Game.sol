@@ -116,7 +116,7 @@ contract Game is Ownable, _Boss, _Character {
         if (_targetCharacter == msg.sender) revert CharacterCannotSelfHeal();
         if (!isCharacterCreated(_targetCharacter)) revert CharacterNotCreated();
 
-        uint32 healAmount = calculateHpHealed(characters[msg.sender].heal, characters[_targetCharacter]);
+        uint32 healAmount = calculateHpHealed(characters[msg.sender].magicalDamage, characters[_targetCharacter]);
         if (healAmount > 0) {
             characters[_targetCharacter].hp += healAmount;
             emit CharacterHealed({
@@ -146,7 +146,7 @@ contract Game is Ownable, _Boss, _Character {
     /// @notice Distribute rewards to all characters that fought the boss, and are still alive
     /// @dev Can cost a lot of gas if many characters fought the boss. It is paid by the owner, not the players.
     function distributeRewards() public onlyOwner {
-        if (!this.isBossDead()) revert BossIsNotDead();
+        if (!isBossDead()) revert BossIsNotDead();
 
         for (uint256 index = 0; index < addressesInvolvedInFight.length; index++) {
             address characterAddress = addressesInvolvedInFight[index];

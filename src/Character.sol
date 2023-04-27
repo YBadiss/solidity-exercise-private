@@ -3,7 +3,7 @@ pragma solidity >=0.8.19;
 
 interface ICharacterEvents {
     /// @dev This emits when the Character is created.
-    event CharacterSpawned(address indexed characterAddress, uint32 maxHp, uint32 physicalDamage, uint32 heal);
+    event CharacterSpawned(address indexed characterAddress, uint32 maxHp, uint32 physicalDamage, uint32 magicalDamage);
     /// @dev This emits when the Character is hit.
     event CharacterIsHit(address indexed characterAddress, string indexed bossName, uint32 characterHp, uint32 damageDealt);
     /// @dev This emits when the Character is hit.
@@ -20,14 +20,14 @@ interface ICharacter is ICharacterEvents {
     /// @param created Whether the Character is empty or not
     /// @param maxHp Max HP of the character
     /// @param physicalDamage Damage the character deals on attack
-    /// @param heal HP healed by the character
+    /// @param magicalDamage Fireball damage and HP healed by the character
     /// @param hp Current HP of the character
     /// @param xp Experience earned by the Character
     struct Character {
         bool created;
         uint32 maxHp;
         uint32 physicalDamage;
-        uint32 heal;
+        uint32 magicalDamage;
         uint32 hp;
         // The xp will grow by a max of uint32 for each Boss killed, which means a Character has to kill
         // 2^32 Bosses with `xpReward == uint32.max` alone to fill up this XP counter.
@@ -112,7 +112,7 @@ contract _Character is ICharacter {
             characterAddress: msg.sender,
             maxHp: characters[msg.sender].maxHp,
             physicalDamage: characters[msg.sender].physicalDamage,
-            heal: characters[msg.sender].heal
+            magicalDamage: characters[msg.sender].magicalDamage
         });
     }
 
@@ -145,7 +145,7 @@ contract _Character is ICharacter {
             created: true,
             maxHp: 100 * (baseEndurance + enduranceBonus),
             physicalDamage: 10 * (baseEndurance + enduranceBonus),
-            heal: 10 * (baseIntelligence + intelligenceBonus),
+            magicalDamage: 10 * (baseIntelligence + intelligenceBonus),
             hp: 100 * (baseEndurance + enduranceBonus),
             xp: 0
         });
@@ -166,7 +166,7 @@ contract _Character is ICharacter {
     /// @notice Indicates if the target Character can heal others
     /// @param _characterAddress Address of the Character to check
     function canCharacterHeal(address _characterAddress) public view returns (bool) {
-        return characters[_characterAddress].xp > 0;
+        return characterLevel(_characterAddress) >= 2;
     }
 
     /// @notice Get the max HP of the character
@@ -187,7 +187,7 @@ contract _Character is ICharacter {
     /// @param _characterAddress Address of the Character to check
     /// @return uint32 Heal of the character
     function characterHeal(address _characterAddress) public view returns (uint32) {
-        return characters[_characterAddress].heal;
+        return characters[_characterAddress].magicalDamage;
     }
 
     /// @notice Get the current HP of the character
