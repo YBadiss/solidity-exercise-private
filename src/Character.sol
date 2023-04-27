@@ -72,14 +72,18 @@ contract _Character is ICharacter {
     uint8 public immutable baseEndurance;
     /// @notice Base modifier for characters' magical ability
     uint8 public immutable baseIntelligence;
+    /// @notice Base modifier for the xp required for an extra level
+    uint8 public immutable baseLevelXp;
 
     /// @notice Instantiate a new contract and set the base modifiers
     /// @dev Not meant to be deployed by itself, use with `Game` contract
     /// @param _baseEndurance Base modifier for characters' max hp and physical damage
     /// @param _baseIntelligence Base modifier for characters' magical ability
-    constructor(uint8 _baseEndurance, uint8 _baseIntelligence) {
+    /// @param _baseLevelXp Base modifier for the xp required for an extra level
+    constructor(uint8 _baseEndurance, uint8 _baseIntelligence, uint8 _baseLevelXp) {
         baseEndurance = _baseEndurance;
         baseIntelligence = _baseIntelligence;
+        baseLevelXp = _baseLevelXp;
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -93,7 +97,7 @@ contract _Character is ICharacter {
     /// @notice Heal a character
     /// @dev Only for characters alive, and cannot self-heal. Implement in the main contract.
     /// @param _targetCharacter Character to heal
-    function healCharacter(address _targetCharacter) external virtual onlyAliveCharacter onlyExperiencedCharacter {}
+    function healCharacter(address _targetCharacter) external virtual onlyAliveCharacter onlyExperiencedCharacter(2) {}
 
     /// @notice Register a new character for the caller
     function newCharacter() external {
@@ -126,8 +130,8 @@ contract _Character is ICharacter {
     }
 
     /// @notice Modifier to only allow characters that have earned xp
-    modifier onlyExperiencedCharacter {
-        if (characters[msg.sender].xp == 0) revert CharacterNotExperienced();
+    modifier onlyExperiencedCharacter(uint8 expectedLevel) {
+        if (characterLevel(msg.sender) < expectedLevel) revert CharacterNotExperienced();
         _;
     }
 
@@ -198,6 +202,20 @@ contract _Character is ICharacter {
     /// @return uint64 Current XP of the character
     function characterXp(address _characterAddress) public view returns (uint64) {
         return characters[_characterAddress].xp;
+    }
+
+    /// @notice Get the current level of the character based on its xp
+    /// @param _characterAddress Address of the Character to check
+    /// @return uint32 Current Level of the character
+    function characterLevel(address _characterAddress) public view returns (uint32) {
+        uint64 currentXp = characterXp(_characterAddress);
+        uint8 level = 1;
+        uint64 xp = baseLevelXp;
+        while (xp <= currentXp) {
+            level++;
+            xp += baseLevelXp * level;
+        }
+        return level;
     }
 
     /// @notice Calculate the amount of damage dealt based on remaining hp

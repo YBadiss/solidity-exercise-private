@@ -53,9 +53,10 @@ contract Game is Ownable, _Boss, _Character {
     /// @param _owner New owner of the contract
     /// @param _baseEndurance Base modifier for characters' max hp and physical damage
     /// @param _baseIntelligence Base modifier for characters' magical ability
-    constructor(address _owner, uint8 _baseEndurance, uint8 _baseIntelligence)
+    /// @param _baseLevelXp Base modifier for the xp required for an extra level
+    constructor(address _owner, uint8 _baseEndurance, uint8 _baseIntelligence, uint8 _baseLevelXp)
         Ownable(_owner)
-        _Character(_baseEndurance, _baseIntelligence)
+        _Character(_baseEndurance, _baseIntelligence, _baseLevelXp)
     {}
 
     ////////////////////////////////////////////////////////////////////////
@@ -111,7 +112,7 @@ contract Game is Ownable, _Boss, _Character {
     /// @notice Heal a character
     /// @dev Only for characters alive, and cannot self-heal
     /// @param _targetCharacter Character to heal
-    function healCharacter(address _targetCharacter) external override onlyAliveCharacter onlyExperiencedCharacter {
+    function healCharacter(address _targetCharacter) external override onlyAliveCharacter onlyExperiencedCharacter(2) {
         if (_targetCharacter == msg.sender) revert CharacterCannotSelfHeal();
         if (!isCharacterCreated(_targetCharacter)) revert CharacterNotCreated();
 

@@ -9,7 +9,7 @@ contract CharacterTest is Test, ICharacter {
     address public characterAddress = address(2);
 
     function setUp() public {
-        characterContract = new _Character({_baseEndurance: 10, _baseIntelligence: 10});
+        characterContract = new _Character({_baseEndurance: 10, _baseIntelligence: 10, _baseLevelXp: 100});
     }
 
     function test_newCharacter() public {
@@ -37,5 +37,12 @@ contract CharacterTest is Test, ICharacter {
 
         vm.expectRevert(ICharacter.CharacterAlreadyCreated.selector);
         characterContract.newCharacter();
+    }
+
+    function test_characterLevelIsOne() public {
+        vm.startPrank(characterAddress);
+        characterContract.newCharacter();
+
+        assertEq(characterContract.characterLevel(characterAddress), 1);
     }
 }

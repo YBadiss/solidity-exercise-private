@@ -7,17 +7,19 @@ import "../src/Game.sol";
 // TODO Simplify several of these function by better using `vm` and cheats to setup test cases
 
 contract GameTest is Test, IOwnable, IBoss, ICharacter {
+    using stdStorage for StdStorage;
+
     Game public game;
     address public owner = address(1);
     Boss boss = Boss({name: "Test Boss", maxHp: 1000, hp: 1000, damage: 50, xpReward: 10000});
-    Boss weakBoss = Boss({name: "Weak Boss", maxHp: 1, hp: 1, damage: 50, xpReward: 10});
+    Boss weakBoss = Boss({name: "Weak Boss", maxHp: 1, hp: 1, damage: 50, xpReward: 100});
     Boss strongBoss = Boss({name: "Strong Boss", maxHp: 1000, hp: 1000, damage: 10000, xpReward: 100000000});
     address public characterAddress = address(2);
     Character public character;
     address public healerAddress = address(3);
 
     function setUp() public {
-        game = new Game({_owner: owner, _baseEndurance: 10, _baseIntelligence: 10});
+        game = new Game({_owner: owner, _baseEndurance: 10, _baseIntelligence: 10, _baseLevelXp: 100});
         vm.prank(characterAddress);
         game.newCharacter();
 
@@ -32,6 +34,8 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
         
         vm.prank(owner);
         game.distributeRewards();
+        // The character must be level 2 or more to heal others
+        assertGe(game.characterLevel(healerAddress), 2);
     }
 
     function test_setBoss_RevertIf_notOwner() public {
