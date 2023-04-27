@@ -34,13 +34,8 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
         game.fightBoss();
         vm.stopPrank();
         
-        vm.startPrank(owner);
-        assertFalse(game.canCharacterHeal(casterAddress));
-        assertFalse(game.canCharacterCastFireball(casterAddress));
+        vm.prank(owner);
         game.distributeRewards();
-        assertTrue(game.canCharacterHeal(casterAddress));
-        assertTrue(game.canCharacterCastFireball(casterAddress));
-        vm.stopPrank();
     }
 
     function test_setBoss_RevertIf_notOwner() public {
@@ -150,6 +145,11 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
         game.castFireball();
     }
 
+    function test_canCastFireball() public {
+        assertFalse(game.canCharacterCastFireball(characterAddress));
+        assertTrue(game.canCharacterCastFireball(casterAddress));
+    }
+
     function test_castFireball_RevertsIf_characterNotCreated() public {
         vm.prank(owner);
         game.setBoss({_name: boss.name, _maxHp: boss.maxHp, _damage: boss.damage, _xpReward: boss.xpReward});
@@ -179,6 +179,11 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
         game.castFireball();
         vm.expectRevert(ICharacter.CharacterIsDead.selector);
         game.castFireball();
+    }
+
+    function test_canCharacterHeal() public {
+        assertFalse(game.canCharacterHeal(characterAddress));
+        assertTrue(game.canCharacterHeal(casterAddress));
     }
 
     function test_healCharacter() public {
@@ -214,6 +219,12 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
         vm.prank(characterAddress);
         vm.expectRevert(ICharacter.CharacterNotExperienced.selector);
         game.healCharacter(casterAddress);
+    }
+
+    function test_healCharacter_RevertsIf_characterDoesNotExist() public {
+        vm.prank(casterAddress);
+        vm.expectRevert(ICharacter.CharacterNotCreated.selector);
+        game.healCharacter(address(0));
     }
 
     function test_distributeRewards() public {

@@ -27,4 +27,12 @@ contract BossTest is Test, IBoss {
         bossContract.setBoss({_name: boss.name, _maxHp: boss.maxHp, _damage: boss.damage, _xpReward: boss.xpReward});
         assertFalse(bossContract.isBossDead());
     }
+
+    function test_RevertIf_bossIsNotDead() public {
+        Boss memory boss = Boss({name: "Test Boss", maxHp: 1000, hp: 1000, damage: 50, xpReward: 10000});
+        bossContract.setBoss({_name: boss.name, _maxHp: boss.maxHp, _damage: boss.damage, _xpReward: boss.xpReward});
+        
+        vm.expectRevert(IBoss.BossIsNotDead.selector);
+        bossContract.setBoss({_name: boss.name, _maxHp: boss.maxHp, _damage: boss.damage, _xpReward: boss.xpReward});
+    }
 }

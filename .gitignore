@@ -9,3 +9,7 @@ out/
 
 # Dotenv file
 .env
+
+# coverage
+lcov.info
+report/

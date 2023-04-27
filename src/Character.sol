@@ -219,13 +219,7 @@ contract _Character is ICharacter {
     /// @return uint32 Current Level of the character
     function characterLevel(address _characterAddress) public view returns (uint32) {
         uint64 currentXp = characterXp(_characterAddress);
-        uint8 level = 1;
-        uint64 xp = baseLevelXp;
-        while (xp <= currentXp) {
-            level++;
-            xp += baseLevelXp * level;
-        }
-        return level;
+        return uint8(currentXp / baseLevelXp) + 1;
     }
 
     /// @notice Calculate the amount of damage dealt based on remaining hp

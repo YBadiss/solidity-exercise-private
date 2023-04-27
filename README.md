@@ -39,6 +39,20 @@ Keep in mind that:
 forge install
 ```
 
+### Test
+
+```sh
+forge test -vvv
+```
+
+### Coverage
+
+```sh
+forge coverage --report lcov && genhtml -o report lcov.info --branch-coverage
+```
+
+Then open `report/index.html`.
+
 #### Environment
 
 This exercise **must be done in [Solidity](https://docs.soliditylang.org/)**. The development environment to compile, deploy, test, and run the code provided by [foundry](https://book.getfoundry.sh/) is already configured.
