@@ -68,10 +68,47 @@ contract Game is Ownable, _Boss, _Character {
         // Don't allow hitting a boss that is dead
         if (isBossDead()) revert BossIsDead();
 
-        address characterAddress = msg.sender;
+        handleFight({
+            characterAddress: msg.sender,
+            characterDamage: characters[msg.sender].physicalDamage
+        });
+    }
+
+    /// @notice Cast the fireball spell on the boss
+    /// @dev Only for characters alive, of at least level 3
+    function castFireball() external override onlyAliveCharacter onlyExperiencedCharacter(3) {
+        // Don't allow hitting a boss that is dead
+        if (isBossDead()) revert BossIsDead();
+
+        handleFight({
+            characterAddress: msg.sender,
+            characterDamage: characters[msg.sender].magicalDamage
+        });
+    }
+
+    /// @notice Heal a character
+    /// @dev Only for characters alive, of at least level 2, and cannot self-heal
+    /// @param _targetCharacter Character to heal
+    function healCharacter(address _targetCharacter) external override onlyAliveCharacter onlyExperiencedCharacter(2) {
+        if (_targetCharacter == msg.sender) revert CharacterCannotSelfHeal();
+        if (!isCharacterCreated(_targetCharacter)) revert CharacterNotCreated();
+
+        uint32 healAmount = calculateHpHealed(characters[msg.sender].magicalDamage, characters[_targetCharacter]);
+        if (healAmount > 0) {
+            characters[_targetCharacter].hp += healAmount;
+            emit CharacterHealed({
+                characterAddress: _targetCharacter,
+                healerAddress: msg.sender,
+                characterHp: characters[_targetCharacter].hp,
+                healAmount: healAmount
+            });
+        }
+    }
+
+    function handleFight(address characterAddress, uint32 characterDamage) private {
         Character memory character = characters[characterAddress];
 
-        uint32 damageDealtByCharacter = calculateDamageDealt(character.physicalDamage, boss.hp);
+        uint32 damageDealtByCharacter = calculateDamageDealt(characterDamage, boss.hp);
         boss.hp -= damageDealtByCharacter;
 
         uint32 damageDealtByBoss = calculateDamageDealt(boss.damage, character.hp);
@@ -105,25 +142,6 @@ contract Game is Ownable, _Boss, _Character {
             emit CharacterKilled({
                 characterAddress: characterAddress,
                 bossName: boss.name
-            });
-        }
-    }
-
-    /// @notice Heal a character
-    /// @dev Only for characters alive, and cannot self-heal
-    /// @param _targetCharacter Character to heal
-    function healCharacter(address _targetCharacter) external override onlyAliveCharacter onlyExperiencedCharacter(2) {
-        if (_targetCharacter == msg.sender) revert CharacterCannotSelfHeal();
-        if (!isCharacterCreated(_targetCharacter)) revert CharacterNotCreated();
-
-        uint32 healAmount = calculateHpHealed(characters[msg.sender].magicalDamage, characters[_targetCharacter]);
-        if (healAmount > 0) {
-            characters[_targetCharacter].hp += healAmount;
-            emit CharacterHealed({
-                characterAddress: _targetCharacter,
-                healerAddress: msg.sender,
-                characterHp: characters[_targetCharacter].hp,
-                healAmount: healAmount
             });
         }
     }

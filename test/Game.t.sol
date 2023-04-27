@@ -12,31 +12,34 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
     Game public game;
     address public owner = address(1);
     Boss boss = Boss({name: "Test Boss", maxHp: 1000, hp: 1000, damage: 50, xpReward: 10000});
-    Boss weakBoss = Boss({name: "Weak Boss", maxHp: 1, hp: 1, damage: 50, xpReward: 100});
+    Boss weakBoss = Boss({name: "Weak Boss", maxHp: 1, hp: 1, damage: 50, xpReward: 600});
     Boss strongBoss = Boss({name: "Strong Boss", maxHp: 1000, hp: 1000, damage: 10000, xpReward: 100000000});
     address public characterAddress = address(2);
     Character public character;
-    address public healerAddress = address(3);
+    address public casterAddress = address(3);
 
     function setUp() public {
         game = new Game({_owner: owner, _baseEndurance: 10, _baseIntelligence: 10, _baseLevelXp: 100});
         vm.prank(characterAddress);
         game.newCharacter();
 
-        // Give some xp to the healer
+        // The character must be level 2 or more to heal others
+        // and level 3 or more to cast fireballs
+        // Give some xp to the caster
         vm.prank(owner);
         game.setBoss({_name: weakBoss.name, _maxHp: weakBoss.maxHp, _damage: weakBoss.damage, _xpReward: weakBoss.xpReward});
 
-        vm.startPrank(healerAddress);
+        vm.startPrank(casterAddress);
         game.newCharacter();
         game.fightBoss();
         vm.stopPrank();
         
         vm.startPrank(owner);
-        // The character must be level 2 or more to heal others
-        assertFalse(game.canCharacterHeal(healerAddress));
+        assertFalse(game.canCharacterHeal(casterAddress));
+        assertFalse(game.canCharacterCastFireball(casterAddress));
         game.distributeRewards();
-        assertTrue(game.canCharacterHeal(healerAddress));
+        assertTrue(game.canCharacterHeal(casterAddress));
+        assertTrue(game.canCharacterCastFireball(casterAddress));
         vm.stopPrank();
     }
 
@@ -140,6 +143,44 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
         game.fightBoss();
     }
 
+    function test_castFireball_RevertsIf_bossIsDead() public {
+        vm.prank(casterAddress);
+
+        vm.expectRevert(IBoss.BossIsDead.selector);
+        game.castFireball();
+    }
+
+    function test_castFireball_RevertsIf_characterNotCreated() public {
+        vm.prank(owner);
+        game.setBoss({_name: boss.name, _maxHp: boss.maxHp, _damage: boss.damage, _xpReward: boss.xpReward});
+
+        address notCharacterAddress = address(0);
+        vm.prank(notCharacterAddress);
+
+        vm.expectRevert(ICharacter.CharacterNotCreated.selector);
+        game.castFireball();
+    }
+
+    function test_castFireball_RevertsIf_characterNotExperienced() public {
+        vm.prank(owner);
+        game.setBoss({_name: boss.name, _maxHp: boss.maxHp, _damage: boss.damage, _xpReward: boss.xpReward});
+
+        vm.prank(characterAddress);
+
+        vm.expectRevert(ICharacter.CharacterNotExperienced.selector);
+        game.castFireball();
+    }
+
+    function test_castFireball_RevertsIf_characterIsDead() public {
+        vm.prank(owner);
+        game.setBoss({_name: strongBoss.name, _maxHp: strongBoss.maxHp, _damage: strongBoss.damage, _xpReward: strongBoss.xpReward});
+
+        vm.startPrank(casterAddress);
+        game.castFireball();
+        vm.expectRevert(ICharacter.CharacterIsDead.selector);
+        game.castFireball();
+    }
+
     function test_healCharacter() public {
         vm.prank(owner);
         game.setBoss({_name: strongBoss.name, _maxHp: strongBoss.maxHp, _damage: strongBoss.damage, _xpReward: strongBoss.xpReward});
@@ -150,23 +191,29 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
 
 
         vm.expectEmit();
-        emit CharacterHealed(characterAddress, healerAddress, game.characterHeal(healerAddress), game.characterHeal(healerAddress));
-        vm.prank(healerAddress);
+        emit CharacterHealed(characterAddress, casterAddress, game.characterHeal(casterAddress), game.characterHeal(casterAddress));
+        vm.prank(casterAddress);
         game.healCharacter(characterAddress);
-        assertEq(game.characterHp(characterAddress), game.characterHeal(healerAddress));
+        assertEq(game.characterHp(characterAddress), game.characterHeal(casterAddress));
     }
 
     function test_healCharacterNeverAboveMaxHp() public {
         assertEq(game.characterHp(characterAddress), game.characterMaxHp(characterAddress));
-        vm.prank(healerAddress);
+        vm.prank(casterAddress);
         game.healCharacter(characterAddress);
         assertEq(game.characterHp(characterAddress), game.characterMaxHp(characterAddress));
     }
 
     function test_healCharacter_RevertsIf_selfHeal() public {
-        vm.prank(healerAddress);
+        vm.prank(casterAddress);
         vm.expectRevert(ICharacter.CharacterCannotSelfHeal.selector);
-        game.healCharacter(healerAddress);
+        game.healCharacter(casterAddress);
+    }
+
+    function test_healCharacter_RevertsIf_characterNotExperienced() public {
+        vm.prank(characterAddress);
+        vm.expectRevert(ICharacter.CharacterNotExperienced.selector);
+        game.healCharacter(casterAddress);
     }
 
     function test_distributeRewards() public {
@@ -191,10 +238,10 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
             vm.prank(characterAddress);
             game.fightBoss();
             // Heal our character because it's dead
-            vm.prank(healerAddress);
+            vm.prank(casterAddress);
             game.healCharacter(characterAddress);
         }
-        uint64 healerXp = game.characterXp(healerAddress);
+        uint64 healerXp = game.characterXp(casterAddress);
 
         vm.expectEmit();
         emit CharacterRewarded({
@@ -209,7 +256,7 @@ contract GameTest is Test, IOwnable, IBoss, ICharacter {
         // The only fighter alive gets its xp based on the damage dealt
         assertEq(game.characterXp(characterAddress), expectedReward);
         // The healer didn't fight, no additional xp
-        assertEq(game.characterXp(healerAddress), healerXp);
+        assertEq(game.characterXp(casterAddress), healerXp);
         // The other fighters are all dead, no xp
         for (uint160 index = 0; index < numberOfDeadCharacters; index++) {
             address deadCharacter = address(index + 4);

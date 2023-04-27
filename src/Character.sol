@@ -99,6 +99,10 @@ contract _Character is ICharacter {
     /// @param _targetCharacter Character to heal
     function healCharacter(address _targetCharacter) external virtual onlyAliveCharacter onlyExperiencedCharacter(2) {}
 
+    /// @notice Cast the fireball spell on the boss
+    /// @dev Implement in the main contract.
+    function castFireball() external virtual onlyAliveCharacter onlyExperiencedCharacter(3) {}
+
     /// @notice Register a new character for the caller
     function newCharacter() external {
         if (characters[msg.sender].created) revert CharacterAlreadyCreated();
@@ -167,6 +171,12 @@ contract _Character is ICharacter {
     /// @param _characterAddress Address of the Character to check
     function canCharacterHeal(address _characterAddress) public view returns (bool) {
         return characterLevel(_characterAddress) >= 2;
+    }
+
+    /// @notice Indicates if the target Character can cast fireball on the boss
+    /// @param _characterAddress Address of the Character to check
+    function canCharacterCastFireball(address _characterAddress) public view returns (bool) {
+        return characterLevel(_characterAddress) >= 3;
     }
 
     /// @notice Get the max HP of the character
